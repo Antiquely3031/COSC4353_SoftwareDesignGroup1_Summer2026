@@ -8,5 +8,5 @@ Repository for Software Design Group 1 in COSC 4353 - section: 11898 | Session 1
     <li>Elvis Noel Trujillo Chaierz</li>
     <li>Kevin Chau</li>
     <li>Richard Tiamzon</li>
-    <li>Placeholder</li>
+    <li>Patrick Callaghan</li>
 </ul>
