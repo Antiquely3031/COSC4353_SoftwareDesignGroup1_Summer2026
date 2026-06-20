@@ -32,6 +32,7 @@
     <li>Montioring of said queue (blacklist/whitelist/custom list)</li>
     <li>Tier System (Class)
         <ul>
+            <li>Creation (either create or delete) of the system</li>
             <li>Changing Tiers</li>
             <li>Revenue distrubtion to adminstrators</li>
         </ul>
