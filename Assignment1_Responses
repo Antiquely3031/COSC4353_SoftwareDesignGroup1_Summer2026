@@ -1,7 +1,9 @@
 1. Initial Thoughts
 
 Who are the main users of the system?
-
+  The main users of QueueSmart are regular users and administrators. Regular users may include customers, students, patients, clients, or visitors who need to join a queue
+or schedule an appointment for a service.Administrators are staff members or managers who are responsible for creating services, monitoring queues, managing priorities,
+and improving the overall flow of service.
 How will users and administrators interact with the application?
 
 What are the most important features?
