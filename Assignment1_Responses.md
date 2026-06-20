@@ -30,7 +30,12 @@
     <li>Joining or leaving a queue</li>
     <li>Basic queue creation (either create or delete a queue)</li>
     <li>Montioring of said queue (blacklist/whitelist/custom list)</li>
-    <li>Changing tier (class)</li>
+    <li>Tier System (Class)
+        <ul>
+            <li>Changing Tiers</li>
+            <li>Revenue distrubtion to adminstrators</li>
+        </ul>
+    </li>
 
 <!-- What are the most important features? -->
 
