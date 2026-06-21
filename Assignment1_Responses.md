@@ -46,26 +46,22 @@ they help users understand their wait time while helping administrators manage d
 
 #### Summary | Quick Notes
 
-<table>
-  <tr>
-    <td>
-      <ul>
-          <li>Login and registration of account</li>
-          <li>Role-based access</li>
-          <li>service management</li>
-          <li>Joining/leaving a queue</li>
-      </ul>
-    </td>
-    <td>
-      <ul>
-          <li>Queue position tracking</li>
-          <li>Estimated wait times</li>
-          <li>Notifications</li>
-          <li>Queue history</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+<div style="display: flex">
+  <ul>
+    <li>Login and registration of account</li>
+    <li>Role-based access</li>
+    <li>service management</li>
+  </ul>
+  <ul>
+    <li>Joining/leaving a queue</li>
+    <li>Queue position tracking</li>
+    <li>Estimated wait times</li>
+  </ul>
+  <ul>
+    <li>Notifications</li>
+    <li>Queue history</li>
+  </ul>
+</div>
 
 <!-- I, Elvis, wrote/made this response summary -->
 
@@ -79,24 +75,18 @@ keeping the queue fair for everyone else.
 
 #### Summary | Quick Notes
 
-<table>
-  <tr>
-    <td>
-      <ul>
-          <li>Long queues</li>
-          <li>Inaccurate estimated wait times</li>
-          <li>Users leaving without updating their status</li>
-      </ul>
-    </td>
-    <td>
-      <ul>
-        <li>Users not responding to their turn</li>
-        <li>Mistime notifications</li>
-        <li>Chance of queue stravation caused by tier/class system</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+<div style="display: flex">
+  <ul>
+    <li>Long queues</li>
+    <li>Inaccurate estimated wait times</li>
+    <li>Users leaving without updating their status</li>
+  </ul>
+  <ul>
+    <li>Users not responding to their turn</li>
+    <li>Mistime notifications</li>
+    <li>Chance of queue stravation caused by tier/class system</li>
+  </ul>
+</div>
 
 <!-- I, Elvis, wrote/made this response summary -->
 
@@ -123,20 +113,14 @@ until the end to complete the entire design.
 
 #### Summary | Quick Notes
 
-<table>
-  <tr>
-    <td>
-      <ul>
-          <li>Accounting the potential shift in requirements</li>
-      </ul>
-    </td>
-    <td>
-      <ul>
-        <li>Incremental approach towards development</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+<div style="display: flex">
+  <ul>
+    <li>Accounting the potential shift in requirements</li>
+  </ul>
+  <ul>
+    <li>Incremental approach towards development</li>
+  </ul>
+</div>
 
 <!-- I, Elvis, wrote/made this response summary -->
 
