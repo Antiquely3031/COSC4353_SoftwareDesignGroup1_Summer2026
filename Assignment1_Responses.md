@@ -190,5 +190,7 @@ The QueueSmart mobile app this group will develop is comprised of a platform tha
 
 <ul>
     <li>Patrick Callaghan (github creation, .md creation, System Context Diagram creation, Overview Explanation</li>
-    <li>Elvis</li>
+    <li>Elvis Noel Trujillo Chairez (response architecture and design, several response summaries)</li>
+    <li>Kevin Chau (Several responses and summaries)</li>
+    <li>Richard Tiamzon (N/A - did not respond to communication from group nor generate/edit content)</li>
 </ul>
