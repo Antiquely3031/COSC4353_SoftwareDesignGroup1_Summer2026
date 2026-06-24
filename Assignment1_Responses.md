@@ -172,5 +172,6 @@ Note: The architecture diagram, or any other diagrams, would also be provided as
 </ul>
 
 #### Architecture diagram
+![System Context Diagram](./SystemContextDiagram.png)
 
 ### Overview Explanation
