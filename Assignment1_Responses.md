@@ -103,7 +103,7 @@ keeping the queue fair for everyone else.
 ## 2. Development Methodology
 
 ### Which methodology will you follow (e.g., Agile, Scrum, Waterfall)?
-&emsp; Our team plans to use an Agile/Scrum development methodology for QueueSmart. Agile is a good fit for this project because
+&emsp; Our team plans to use an Agile development methodology for QueueSmart. Agile is a good fit for this project because
 the application has multiple features that can be designed, reviewed, and improved over time, such as login and registration,
 user roles, service management, queue management, notifications, and history tracking.
 
@@ -111,7 +111,7 @@ user roles, service management, queue management, notifications, and history tra
 
 #### Summary | Quick Notes
 
-##### Chosen Methodology: Agile/Scrum
+##### Chosen Methodology: Agile
 
 <!-- I, Elvis, wrote/made this response summary -->
 
