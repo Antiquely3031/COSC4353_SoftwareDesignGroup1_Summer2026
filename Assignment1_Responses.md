@@ -1,4 +1,4 @@
-<!-- Patrick made the document and wrote down the questions up to the second section -->
+<!-- Patrick made the repository and the .md document, as well as wrote down the questions up to the second section, edited spelling and grammar in the responses, generated the System Context Diagram, and completed the "Overview Explanation" -->
 <!-- I, Elvis, am the one who is editor/documentation guy (mainly formatting for now) -->
 
 # Assignment 1: Design Analysis
@@ -33,8 +33,8 @@ dashboard. They will be able to create and manage services, set expected service
 #### Summary | Quick Notes
 
 <ul>
-    <li>Regular Users : Reggistering/logining into their Accounts, the able to join or leave a queue of their choosing, and view the general metrics regarding their position</li>
-    <li>Administrators : Queue creation and manangemnt, publicly share desired metrics/information of a queue to the public and queuers, and view basic statistics of a given queue(s)</li>
+    <li>Regular Users : Registering/loging into their Accounts, the able to join or leave a queue of their choosing, and view the general metrics regarding their position</li>
+    <li>Administrators : Queue creation and management, publicly share desired metrics/information of a queue to the public and queuers, and view basic statistics of a given queue(s)</li>
 </ul>
 
 ### What are the most important features?
@@ -91,8 +91,8 @@ keeping the queue fair for everyone else.
     <td>
       <ul>
         <li>Users not responding to their turn</li>
-        <li>Mistime notifications</li>
-        <li>Chance of queue stravation caused by tier/class system</li>
+        <li>Mistimed notifications</li>
+        <li>Chance of queue starvation caused by tier/class system</li>
       </ul>
     </td>
   </tr>
@@ -115,7 +115,7 @@ user roles, service management, queue management, notifications, and history tra
 
 <!-- I, Elvis, wrote/made this response summary -->
 
-### Why is this methodologoy appropriate for this project?
+### Why is this methodology appropriate for this project?
 &emsp; This methodology is appropriate because QueueSmart may change as the team thinks more about user needs and administrator 
 needs. For example, the team may first design the basic queue system, then later improve how priority levels, 
 notifications, and estimated wait times work. Agile allows the team to make progress in smaller stages instead of waiting 
@@ -151,8 +151,8 @@ and adjust the design when needed.
 #### Summary | Quick Notes
 
 <ul>
-  <li>Avoids/prevent member(s) from accidently overwrite the each others' work</li>
-  <li>Ensuring every member is general agreeance of the project progress/state</li>
+  <li>Avoids/prevent member(s) from accidentally overwrite the each others' work</li>
+  <li>Ensuring every member is general agreement of the project's current progress/state</li>
 </ul>
 
 <!-- I, Elvis, wrote/made this response summary -->
@@ -175,3 +175,13 @@ Note: The architecture diagram, or any other diagrams, would also be provided as
 ![System Context Diagram](./SystemContextDiagram.png)
 
 ### Overview Explanation
+QueueSmart Queue Management Service:</li>
+<ul>
+    <li>User Interface (join/leave queue, track queue position, track wait times)</li>
+    <li>Administrator Interface(manage/create queues, manage interface/functions, track queue and stat history)</li>
+    <li>Notification Management (generate, push, update)</li>
+    <li>Settings</li>
+    <li>Analytics</li>
+</ul>
+
+The QueueSmart mobile app this group will develop is comprised of a platform that verifies authentication of users and adminstrators, oversees queue creation and scheduling, generates notifications for distribution through email and SMS, and provides settings and analytic components. Distribution of notifications and calendar updates will be provided via a service external to the app. The system is designed to allow users to join and monitor queues while enabling adminstrators to manage services, track queue activity, and analyze usage data through an administrative dashboard.
