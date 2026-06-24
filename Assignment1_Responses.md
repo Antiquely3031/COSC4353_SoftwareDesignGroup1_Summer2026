@@ -33,7 +33,7 @@ dashboard. They will be able to create and manage services, set expected service
 #### Summary | Quick Notes
 
 <ul>
-    <li>Regular Users : Registering/loging into their Accounts, the able to join or leave a queue of their choosing, and view the general metrics regarding their position</li>
+    <li>Regular Users : Registering/logging into their Accounts, are able to join or leave a queue of their choosing, and view the general metrics regarding their position</li>
     <li>Administrators : Queue creation and management, publicly share desired metrics/information of a queue to the public and queuers, and view basic statistics of a given queue(s)</li>
 </ul>
 
@@ -152,7 +152,7 @@ and adjust the design when needed.
 
 <ul>
   <li>Avoids/prevent member(s) from accidentally overwrite the each others' work</li>
-  <li>Ensuring every member is general agreement of the project's current progress/state</li>
+  <li>Ensuring every member is in general agreement with the project's current progress/state</li>
 </ul>
 
 <!-- I, Elvis, wrote/made this response summary -->
@@ -175,7 +175,7 @@ Note: The architecture diagram, or any other diagrams, would also be provided as
 ![System Context Diagram](./SystemContextDiagram.png)
 
 ### Overview Explanation
-QueueSmart Queue Management Service:</li>
+#### QueueSmart Queue Management Service:
 <ul>
     <li>User Interface (join/leave queue, track queue position, track wait times)</li>
     <li>Administrator Interface(manage/create queues, manage interface/functions, track queue and stat history)</li>
@@ -184,7 +184,7 @@ QueueSmart Queue Management Service:</li>
     <li>Analytics</li>
 </ul>
 
-The QueueSmart mobile app this group will develop is comprised of a platform that verifies authentication of users and adminstrators, oversees queue creation and scheduling, generates notifications for distribution through email and SMS, and provides settings and analytic components. Distribution of notifications and calendar updates will be provided via a service external to the app. The system is designed to allow users to join and monitor queues while enabling adminstrators to manage services, track queue activity, and analyze usage data through an administrative dashboard.
+The QueueSmart mobile app that this group will develop is comprised of a platform that verifies the authentication of users and administrators, oversees queue creation and scheduling, generates notifications for distribution through email and SMS, and provides settings and analytic components. Distribution of notifications and calendar updates will be provided via a service external to the app. The system is designed to allow users to join and monitor queues while enabling administrators to manage services, track queue activity, and analyze usage data through an administrative dashboard.
 
 ### Group 1 Members and Responsibilities Division
 
@@ -192,5 +192,5 @@ The QueueSmart mobile app this group will develop is comprised of a platform tha
     <li>Patrick Callaghan (github repository creation, .md creation, System Context Diagram creation, Overview Explanation)</li>
     <li>Elvis Noel Trujillo Chairez (response architecture and design, several response summaries)</li>
     <li>Kevin Chau (Several responses and summaries)</li>
-    <li>Richard Tiamzon (Container Diagram, embeded SCD .png)</li>
+    <li>Richard Tiamzon (Container Diagram, embedded SCD.png)</li>
 </ul>
