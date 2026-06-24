@@ -173,7 +173,7 @@ Note: The architecture diagram, or any other diagrams, would also be provided as
 
 #### Architecture Diagram
 ![System Context Diagram](./SystemContextDiagram.png)
-<!-- I, Richard created the Container Diagram using mermaid -->
+<!-- I, Richard, created the Container Diagram using mermaid -->
 #### Container Diagram
 ```mermaid
 flowchart TD
@@ -233,5 +233,5 @@ The QueueSmart mobile app that this group will develop is comprised of a platfor
     <li>Patrick Callaghan (github repository creation, .md creation, System Context Diagram creation, Overview Explanation)</li>
     <li>Elvis Noel Trujillo Chairez (response architecture and design, several response summaries)</li>
     <li>Kevin Chau (Several responses and summaries)</li>
-    <li>Richard Tiamzon (Container Diagram, embedded SCD.png)</li>
+    <li>Richard Tiamzon (Container Diagram creation with mermaid, embedded SCD.png, proof reading/ syntax formatting)</li>
 </ul>
