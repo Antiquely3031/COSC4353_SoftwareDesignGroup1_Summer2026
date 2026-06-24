@@ -185,3 +185,10 @@ QueueSmart Queue Management Service:</li>
 </ul>
 
 The QueueSmart mobile app this group will develop is comprised of a platform that verifies authentication of users and adminstrators, oversees queue creation and scheduling, generates notifications for distribution through email and SMS, and provides settings and analytic components. Distribution of notifications and calendar updates will be provided via a service external to the app. The system is designed to allow users to join and monitor queues while enabling adminstrators to manage services, track queue activity, and analyze usage data through an administrative dashboard.
+
+### Group 1 Members and Responsibilities Division
+
+<ul>
+    <li>Patrick Callaghan (github creation, .md creation, System Context Diagram creation, Overview Explanation</li>
+    <li>Elvis</li>
+</ul>
