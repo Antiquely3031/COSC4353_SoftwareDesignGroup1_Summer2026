@@ -171,8 +171,49 @@ Note: The architecture diagram, or any other diagrams, would also be provided as
     <li>PlantUML : *.wsd, *.puml, *.plantuml, or *.iuml</li>
 </ul>
 
-#### Architecture diagram
+#### Architecture Diagram
 ![System Context Diagram](./SystemContextDiagram.png)
+<!-- I, Richard created the Container Diagram using mermaid -->
+#### Container Diagram
+```mermaid
+flowchart TD
+    User["User\n(Customer)"]
+    Admin["Administrator\n(Service Management)"]
+
+    subgraph System ["QueueSmart System"]
+        direction TB
+        MobileApp["Mobile Application\n[Front-End]\nUI for tracking status"]
+        API["API Application\n[Back-End]\nCore logic, queue math"]
+        DB[("Database\n[Data Store]\nStores credentials, stats")]
+
+        MobileApp -->|"API calls (HTTPS)"| API
+        API -->|Read/Writes data| DB
+    end
+
+    subgraph External[" "]
+        direction TB
+        Notif["Notifications System\n[External: E-mail, SMS]"]
+        Calendar["Calendar System\n[External: Sync]"]
+    end
+    style External fill:none,stroke:none
+   
+    User -->|Joins/leaves queue| MobileApp
+    Admin -->|Manages queues| MobileApp
+
+    API -.->|"Triggers alerts"| Notif
+    API -.->|"Syncs appointments"| Calendar
+
+    DummyLeft[" "] ~~~ API
+    API ~~~ Notif
+    style DummyLeft fill:none,stroke:none,color:transparent
+
+    classDef external fill:#eee,stroke:#555,stroke-width:2px,color:#000;
+    classDef internal fill:#87CEFA,stroke:#005c99,stroke-width:2px,color:#000;
+
+    class Notif,Calendar external;
+    class MobileApp,API,DB internal;
+     
+```
 
 ### Overview Explanation
 #### QueueSmart Queue Management Service:
