@@ -189,7 +189,7 @@ The QueueSmart mobile app this group will develop is comprised of a platform tha
 ### Group 1 Members and Responsibilities Division
 
 <ul>
-    <li>Patrick Callaghan (github repository creation, .md creation, System Context Diagram creation, Overview Explanation</li>
+    <li>Patrick Callaghan (github repository creation, .md creation, System Context Diagram creation, Overview Explanation)</li>
     <li>Elvis Noel Trujillo Chairez (response architecture and design, several response summaries)</li>
     <li>Kevin Chau (Several responses and summaries)</li>
     <li>Richard Tiamzon (Container Diagram, embeded SCD .png)</li>
