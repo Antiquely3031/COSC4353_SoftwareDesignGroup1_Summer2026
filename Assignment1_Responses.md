@@ -37,6 +37,8 @@ dashboard. They will be able to create and manage services, set expected service
     <li>Administrators : Queue creation and management, publicly share desired metrics/information of a queue to the public and queuers, and view basic statistics of a given queue(s)</li>
 </ul>
 
+<!-- I, Elvis, wrote/made this response summary -->
+
 ### What are the most important features?
 &emsp; The most important features are login and registration, role-based access, service management, queue joining and leaving, 
 queue position tracking, estimated wait times, notifications, and queue history. These features are important because
@@ -113,7 +115,7 @@ user roles, service management, queue management, notifications, and history tra
 
 ##### Chosen Methodology: Agile
 
-<!-- I, Elvis, wrote/made this response summary -->
+<!-- I, Elvis, wrote/made this response summary; then Kevin alter to fit current direction -->
 
 ### Why is this methodology appropriate for this project?
 &emsp; This methodology is appropriate because QueueSmart may change as the team thinks more about user needs and administrator 
@@ -151,7 +153,7 @@ and adjust the design when needed.
 #### Summary | Quick Notes
 
 <ul>
-  <li>Avoids/prevent member(s) from accidentally overwrite the each others' work</li>
+  <li>Avoids/prevent member(s) from accidentally overwriting each others' work</li>
   <li>Ensuring every member is in general agreement with the project's current progress/state</li>
 </ul>
 
@@ -165,15 +167,29 @@ and adjust the design when needed.
 
 ### Diagram(s)
 
-Note: The architecture diagram, or any other diagrams, would also be provided as a standalone PDF or as a UML file. The types of UML files and their file extension(s) used by us, the contributors, are below: 
+Note: The architecture diagram, or any other diagrams, would also be provided as a standalone PDF or as a UML file. The types of UML files and their file extension(s) that are used or can be used by us, the contributors, are below: 
 
-<ul>
-    <li>PlantUML : *.wsd, *.puml, *.plantuml, or *.iuml</li>
-</ul>
+<table>
+  <tr>
+    <td>PlantUML</td>
+    <td>*.wsd, *.puml, *.plantuml, or *.iuml</ul>
+  </tr>
+  <tr>
+    <td>Mermaid</td>
+    <td>directly in *.md, *.mmd, or *.mermaid</ul>
+  </tr>
+  <tr>
+    <td>Draw.io</td>
+    <td>*.drawio</td>
+  </tr>
+</table>
+
+<!-- I, Elvis, retouch the note section to be more visiually more palable -->
 
 #### Architecture Diagram
 ![System Context Diagram](./SystemContextDiagram.png)
 <!-- I, Richard, created the Container Diagram using mermaid -->
+
 #### Container Diagram
 ```mermaid
 flowchart TD
@@ -218,20 +234,40 @@ flowchart TD
 ### Overview Explanation
 #### QueueSmart Queue Management Service:
 <ul>
-    <li>User Interface (join/leave queue, track queue position, track wait times)</li>
-    <li>Administrator Interface(manage/create queues, manage interface/functions, track queue and stat history)</li>
-    <li>Notification Management (generate, push, update)</li>
+    <li>User Interface (join/leave queue, track queue position, and track wait times)</li>
+    <li>Administrator Interface (manage/create queues, manage interface/functions, track queue, and stat history)</li>
+    <li>Notification Management (generate, push, and update)</li>
     <li>Settings</li>
     <li>Analytics</li>
 </ul>
 
-The QueueSmart mobile app that this group will develop is comprised of a platform that verifies the authentication of users and administrators, oversees queue creation and scheduling, generates notifications for distribution through email and SMS, and provides settings and analytic components. Distribution of notifications and calendar updates will be provided via a service external to the app. The system is designed to allow users to join and monitor queues while enabling administrators to manage services, track queue activity, and analyze usage data through an administrative dashboard.
+&emsp; The QueueSmart mobile app that this group will develop comprises a platform that verifies the authentication of users and administrators, oversees queue creation and scheduling, generates notifications for distribution through email and SMS, and provides settings and analytic components. Distribution of notifications and calendar updates will be provided via a service external to the app. The system is designed to allow users to join and monitor queues while enabling administrators to manage services, track queue activity, and analyze usage data through an administrative dashboard.
+
+<!-- Patrick wrote/made the response -->
 
 ### Group 1 Members and Responsibilities Division
 
-<ul>
-    <li>Patrick Callaghan (github repository creation, .md creation, System Context Diagram creation, Overview Explanation)</li>
-    <li>Elvis Noel Trujillo Chairez (response architecture and design, several response summaries)</li>
-    <li>Kevin Chau (Several responses and summaries)</li>
-    <li>Richard Tiamzon (Container Diagram creation with mermaid, embedded SCD.png, proof reading/ syntax formatting)</li>
-</ul>
+<table>
+  <tr>
+      <td>Student</td>
+      <td>Contributions</td>
+  </tr>
+  <tr>
+    <td>Patrick Callaghan</td>
+    <td>Github repository creation, .md creation, System Context Diagram creation, and Overview Explanation. In addition, wrote the questions for the first two sections.</td>
+  </tr>
+  <tr>
+    <td>Elvis Noel Trujillo Chairez</td>
+    <td>Wrote the response summaries for the first two sections, and aided in the creation of the Architecture and System Container diagrams via setting/wrote up the third seciton and generated ideas with Patrick and Richard. In addition, being the main docmentation (formatting/presentation) lead and one of two editors (i.e. proof-reading/syntax formatting).</td>
+  </tr>
+  <tr>
+    <td>Kevin Chau</td>
+    <td>Wrote the responses and a summary in the first two sections. Effectively, the main lead of the group due having a more clear idea of the project.</td>
+  </tr>
+  <tr>
+    <td>Richard Tiamzon</td>
+    <td>Container Diagram creation with mermaid, embedded SCD.png, and being the documentation asistent and one of the two editors (i.e. proof-reading/syntax formatting).</td>
+  </tr>
+</table>
+
+<!-- I, Elvis, did a massive retouch up of the list -- now table, and added more detail to what contribution we did from what I could gather from our discord and github commit history(ies) of all branches -- mainly the main branch. -->
