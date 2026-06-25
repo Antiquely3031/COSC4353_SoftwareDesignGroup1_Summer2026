@@ -262,11 +262,11 @@ flowchart TD
   </tr>
   <tr>
     <td>Kevin Chau</td>
-    <td>Wrote the responses and a summary in the first two sections. Effectively, the main lead of the group due having a more clear idea of the project.</td>
+    <td>Wrote the responses and a summary in the first two sections. Helped to organize thoughts on discord for SCD and CD and guide discussion about overall flow of the project.</td>
   </tr>
   <tr>
     <td>Richard Tiamzon</td>
-    <td>Container Diagram creation with mermaid, embedded SCD.png, and being the documentation asistent and one of the two editors (i.e. proof-reading/syntax formatting).</td>
+    <td>Container Diagram creation with mermaid, embedded SCD.png, and being the documentation assistant and one of the editors (i.e. proof-reading/syntax formatting).</td>
   </tr>
 </table>
 
