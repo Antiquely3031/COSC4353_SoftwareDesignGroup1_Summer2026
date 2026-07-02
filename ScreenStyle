@@ -1,3 +1,4 @@
+Copy these elements from QRLoginScreen.html to maintain formatting and style:
 .field{ ... }
 .field label{ ... }
 .field input{ ... }
