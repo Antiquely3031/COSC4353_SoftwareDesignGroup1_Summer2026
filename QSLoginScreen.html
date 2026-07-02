@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QueueSmart — Auth</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600;7..72,700&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#1E4CD2;
@@ -75,7 +75,7 @@
     font-weight:500;
   }
   h1{
-    font-family:'EB Garamond',serif;
+    font-family:'Literata',serif;
     font-weight:500;
     font-size:30px;
     color:var(--text);
@@ -85,7 +85,7 @@
   .sub{
     color:var(--muted);
     font-size:14px;
-    margin:0 0 28px;
+    margin:0 0 18px;
     line-height:1.5;
   }
   .toggle{
@@ -101,7 +101,7 @@
     border:none;
     background:transparent;
     color:var(--muted);
-    font-family:'EB Garamond',serif;
+    font-family:'Literata',serif;
     font-size:13px;
     font-weight:600;
     border-radius:9px;
@@ -113,7 +113,7 @@
     color:var(--linktext);
     box-shadow: inset 0 0 0 1px rgba(201,161,92,0.25);
   }
-  form{ display:flex; flex-direction:column; gap:16px; }
+  form{ display:flex; flex-direction:column; gap:14px; }
   .field{ display:flex; flex-direction:column; gap:6px; }
   .field label{
     font-size:12px;
@@ -126,7 +126,7 @@
     border-radius:10px;
     padding:13px 14px;
     color:var(--text);
-    font-family:'EB Garamond',serif;
+    font-family:'Literata',serif;
     font-size:14px;
     outline:none;
     transition:border-color .15s ease;
@@ -149,7 +149,7 @@
     border:none;
     border-radius:10px;
     padding:14px 0;
-    font-family:'EB Garamond',serif;
+    font-family:'Literata',serif;
     font-weight:600;
     font-size:14px;
     cursor:pointer;
@@ -160,7 +160,7 @@
     margin-top:auto;
     padding-top:24px;
     text-align:center;
-    font-size:12px;
+    font-size:14px;
     color:var(--muted);
     display:flex;
     flex-direction:column;
@@ -174,7 +174,7 @@
   .admin-link{
     color:var(--muted);
     font-weight:500;
-    font-size:11px;
+    font-size:12px;
   }
   .hidden{ display:none; }
   .toast{
@@ -233,7 +233,7 @@
     <form id="signupForm" class="hidden" onsubmit="return handleSignup(event)">
       <div class="field">
         <label>Name</label>
-        <input type="text" id="signupName" placeholder="Your name">
+        <input type="text" id="signupName" placeholder="Your name" maxlength="50">
         <div class="errmsg" id="signupNameErr"></div>
       </div>
       <div class="field">
@@ -243,7 +243,7 @@
       </div>
       <div class="field">
         <label>Password</label>
-        <input type="password" id="signupPassword" placeholder="8+ characters">
+        <input type="password" id="signupPassword" placeholder="8-20 characters" maxlength="20">
         <div class="errmsg" id="signupPasswordErr"></div>
       </div>
       <div class="field">
@@ -362,7 +362,7 @@ function handleLogin(e){
 
   if(valid){
     // Real auth API goes here
-    showToast('Login validated — wire up your API here');
+    showToast('Login validated — The API will be connected later');
   }
   return false;
 }
@@ -376,6 +376,7 @@ function handleSignup(e){
   const confirm = document.getElementById('signupConfirm').value;
 
   if(!name){ setError('signupNameErr','Name is required'); valid=false; }
+  else if(name.length > 50){ setError('signupNameErr','Name must be under 50 characters in length.')}
   else setError('signupNameErr','');
 
   if(!email){ setError('signupEmailErr','Email is required'); valid=false; }
@@ -384,6 +385,7 @@ function handleSignup(e){
 
   if(!pass){ setError('signupPasswordErr','Password is required'); valid=false; }
   else if(pass.length < 8){ setError('signupPasswordErr','Use at least 8 characters'); valid=false; }
+  else if(pass.length > 20){ setError('signupPasswordErr','Password must be between 8 and 20 characters in length'); valid=false; }
   else setError('signupPasswordErr','');
 
   if(confirm !== pass || !confirm){ setError('signupConfirmErr','Passwords don\'t match'); valid=false; }
