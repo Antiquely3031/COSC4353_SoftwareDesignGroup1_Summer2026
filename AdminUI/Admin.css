@@ -1,0 +1,70 @@
+:root 
+{
+  /* Variabels */
+  --ink: #1E4CD2;
+  --card: #172B3E;
+  --field: #172B3E;
+  --text: #F2F9F8;
+  --muted: #8b8b96;
+  --gold: #F2F9F8;
+  --gold-dim: rgba(201,161,92,0.35);
+  --error: #e8836b;
+}
+
+body 
+{
+  /* Characterisitics */
+  background-color: var(--ink);
+
+  /* Positioning */
+  display: flex;
+  justify-content: center;
+}
+
+.scroll-list-box
+{
+  /* Dimensions */
+  height: 30vh; 
+  width: 80vw;
+
+  /* Makes it scrollable */
+  overflow-y: auto; 
+  -webkit-overflow-scrolling: touch;
+
+  /* Characterisitics */
+  border: 12px solid var(--card); 
+  border-radius: 15px;
+}
+
+.scroll-list-box ul 
+{
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.scroll-list-box li 
+{
+  height: 5vh;
+}
+
+.scroll-list-box button 
+{
+  /* Dimensions */
+  height: 100%;
+  width: 100%;
+
+  /* Characterisitics */
+    border: 2px solid var(--card);
+    padding-inline: 10px;
+
+    /* Spacing */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    /* Text */
+    color: var(--field);
+    font-size: 20px;
+    text-align: left;
+}
