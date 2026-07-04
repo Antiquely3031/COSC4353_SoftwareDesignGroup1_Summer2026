@@ -18,7 +18,27 @@ body
 
   /* Positioning */
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+}
+
+.SLB-Title
+{
+  /* Dimensions */
+  width: 80vw;
+
+  /* Positioning */
+  display: flex;
+  justify-content: space-between;
+
+  /* Characterisitcs */
+  color: var(--text);
+  font: 24px Arial, sans-serif;
+}
+
+.SLB-Title p
+{
+  margin: 5px;
 }
 
 .scroll-list-box
