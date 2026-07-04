@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QueueSmart Dashboard</title>
+
+    <style>
+        :root {
+            --ink: #1E4CD2;
+            --card: #172B3E;
+            --field: #172B3E;
+            --text: #F2F9F8;
+            --muted: #8b8b96;
+            --error: #e8836b;
+            --background: #07090f;
+            --border: rgba(242, 249, 248, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'EB Garamond',serif;
+            background-color: var(--background);
+            color: var(--text);
+        }
+
+        .top-header {
+            background-color: var(--ink);
+            color: var(--text);
+            text-align: center;
+            padding: 24px;
+        }
+
+        .top-header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .top-header p {
+            margin: 8px 0 0;
+            color: var(--text);
+        }
+
+        .navbar {
+            background-color: var(--card);
+            padding: 14px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .navbar a {
+            color: var(--text);
+            text-decoration: none;
+            margin: 0 12px;
+            font-weight: bold;
+        }
+
+        .navbar a:hover {
+            color: var(--muted);
+        }
+
+        .dashboard-container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 24px auto;
+        }
+
+        .card {
+            background-color: var(--card);
+            padding: 22px;
+            margin-bottom: 22px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+        }
+
+        .card h2 {
+            margin-top: 0;
+        }
+
+        .card p,
+        .card li {
+            color: var(--muted);
+        }
+
+        .card strong {
+            color: var(--text);
+        }
+
+        .service-grid {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .service-card {
+            background-color: var(--field);
+            padding: 18px;
+            border-radius: 12px;
+            flex: 1;
+            min-width: 220px;
+            border: 1px solid var(--border);
+        }
+
+        .service-card h3 {
+            margin-top: 0;
+        }
+
+        .service-card a {
+            display: inline-block;
+            margin-top: 10px;
+            background-color: var(--text);
+            color: #000;
+            padding: 10px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .service-card a:hover {
+            background-color: #dce8e7;
+        }
+
+        .status-badge {
+            background-color: var(--ink);
+            color: var(--text);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .notification-list {
+            padding-left: 20px;
+        }
+        .logo-area {
+            position: absolute;
+            top: 15px;
+            left: 25px;
+            text-align: left;
+        }
+        .logo-area img {
+            width: 65px;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+<!-- PLACE HOLDER DATA AND SAMPLE FORMAT-->
+    <!--Logo image location-->
+
+    <header class="top-header">
+        <div class="logo-area">
+            <img src="QueueSmartLogo.png" alt="QueueSmart Logo">
+        </div>
+        <h1>QueueSmart</h1>
+        <p>Welcome, User!</p>
+    </header>
+
+    <nav class="navbar">
+        <a href="user-dashboard.html">Dashboard</a>
+        <a href="join-queue.html">Join Queue</a>
+        <a href="queue-status.html">Queue Status</a>
+        <a href="history.html">History</a>
+        <a href="QSLoginScreen.html">Logout</a>
+    </nav>
+    <main class="dashboard-container">
+
+        <section class="card">
+            <h2>Welcome Back</h2>
+            <p>View your current queue status, available services, and recent notifications.</p>
+        </section>
+
+        <!-- Current Queue Status Reminder that values seen are placeholder -->
+        <section class="card">
+            <h2>Waiting Status</h2>
+            <p><strong>Service:</strong> PLACEHOLDER</p>
+            <p><strong>Current Position:</strong> PLACEHOLDER</p>
+            <p><strong>Estimated Wait Time (minutes):</strong> PLACEHOLDER</p>
+            <p><strong>Status:</strong> <span class="status-badge">Waiting</span></p>
+        </section>
+
+        <!-- Selecting Available Services-->
+        <section class="card">
+            <h2>Available Services</h2>
+
+            <div class="service-grid">
+                <div class="service-card">
+                    <h3>Advising things</h3>
+                    <p>Estimated wait: 18 minutes</p>
+                    <a href="join-queue.html">Join Queue</a>
+                </div>
+
+                
+            </div>
+        </section>
+        <!-- History/Notifications-->
+        <section class="card">
+            <h2>Notifications</h2>
+            <ul class="notification-list">
+                <li>Your queue position changed from 4 to 3.</li>
+                <li>You are currently waiting for Academic Advising.</li>
+                <li>You will be notified when your turn is approaching.</li>
+            </ul>
+        </section>
+
+    </main>
+
+</body>
+</html>
