@@ -14,10 +14,7 @@
   font-size: 2rem;
 }
 
-.SLB-Title p
-{
-  margin: 5px;
-}
+.SLB-Title p { margin: 5px; }
 
 .scroll-list-box
 {
@@ -37,10 +34,7 @@
   margin: 0;
 }
 
-.scroll-list-box li 
-{
-  height: 5vh;
-}
+.scroll-list-box li { height: 5vh; }
 
 .scroll-list-box button 
 {
@@ -67,21 +61,21 @@
 
 .SCB-Title
 {
-    /* Dimensions */
-    width: 80vw;
+  /* Dimensions */
+  width: 80vw;
 
-    /* Characterisitcs */
-        color: var(--text);
-        align-items: left;
+  /* Characterisitcs */
+      color: var(--text);
+      align-items: left;
 
-        /* Text */
-        font-size: 2rem;
+      /* Text */
+      font-size: 2rem;
 }
 
 .status-change-box 
 {
   /* Dimensions */
-  height: 25vh; 
+  height: 50%; 
   width: 80vw;
 
   /* Characterisitcs */
@@ -100,7 +94,39 @@
     margin: 12px 0px;
 }
 
-.status-change-box span p 
+.status-change-box span p { margin: 0px 6px 0px 0px;}
+
+#action-buttons 
 {
-  margin: 0px 6px 0px 0px;
+  height: 12vh;
+  margin-top: 2vh;
+  justify-content: space-between;
+}
+
+#action-buttons button 
+{
+  /* Dimensions */
+  width: 47.5%;
+
+  /* Characterisitics */
+  box-sizing: border-box;
+  border-radius: 14px;
+  font-size: 2rem;
+}
+
+#SCB-AB-Open { background-color: greenyellow; }
+
+#SCB-AB-Close { background-color: #DE3163; }
+
+/* Button Feedback */
+
+.button-feedback:active 
+{
+  animation: quick-darken 0.25s ease-out;
+}
+
+@keyframes quick-darken {
+  0% { filter: brightness(1); }
+  20% { filter: brightness(0.5); }
+  100% { filter: brightness(1); } 
 }
