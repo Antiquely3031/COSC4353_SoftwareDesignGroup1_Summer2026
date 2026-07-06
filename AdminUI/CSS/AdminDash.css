@@ -98,12 +98,21 @@
 
 #action-buttons 
 {
-  height: 12vh;
+  height: 24vh;
   margin-top: 2vh;
+  
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+}
+
+#AB-apply-to-service
+{
+  height: 12vh;
   justify-content: space-between;
 }
 
-#action-buttons button 
+#AB-apply-to-service button 
 {
   /* Dimensions */
   width: 47.5%;
@@ -117,6 +126,15 @@
 #SCB-AB-Open { background-color: greenyellow; }
 
 #SCB-AB-Close { background-color: #DE3163; }
+
+#SCB-AB-Deselect 
+{
+  background-color: var(--error);
+  border-radius: 14px;
+  margin-top: 4px;
+  font-size: 2rem;
+  height:45%;
+}
 
 /* Button Feedback */
 

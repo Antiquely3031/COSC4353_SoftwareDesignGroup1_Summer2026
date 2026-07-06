@@ -56,9 +56,17 @@ function Service_Status_Change(Action_Button)
         const Service_Name = SCB_Name.textContent;
         const Service_Status = Action_Button.target.textContent.trim();
 
-    //Core
+    // Checks
     if (Service_Name === "Select Service") {return;}
-
+    if (Service_Status == "Deselect") 
+    {
+        // Alter Modifictions
+        SCB_Name.textContent = "Select Service";
+        SCB_Status.textContent = "NaN";
+        return;
+    }
+    
+    // Modifications
     const Listed_Service = document.getElementById(`Button-Service-${Service_Name}`);
     const LS_Status = Listed_Service.querySelector('p:nth-child(2)');
     
