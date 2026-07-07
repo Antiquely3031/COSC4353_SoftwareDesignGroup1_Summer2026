@@ -4,30 +4,27 @@
 
     Action_Buttons.forEach(button => {button.addEventListener("click", Service_Status_Change)});
 
-    // Getting and setting up the service list for the Dashboard
-    const Service_List = document.querySelector('.scroll-list-box ul');
+    document.addEventListener("DOMContentLoaded", () => {
+        // Startup just for the Dashboard
+        const Action_Buttons = document.querySelectorAll('#action-buttons button');
 
-    for (let index = 1; index <= 30; index++) 
-    {
-        // Variables
-        const Index_li = document.createElement('li');
-        const Name = `Placeholder ${index}`;
-        const Queue_Length_Count = "NaN";
-        const Status = "NaN";
+        Action_Buttons.forEach(button => {button.addEventListener("click", Service_Status_Change)});
 
-        // Shorthands
-        const Button_Class = `button-feedback`;
-        const Button_Id = `Button-Service-${Name}`;
-        const Calling_Function = `Service_Selected(this)`;
-        const Button_Parts = [
-            `<button type="button" class="${Button_Class}" id="${Button_Id}" onclick="${Calling_Function}">`, 
-            `</button>`
-        ];
+        // Target the list items already produced by Admin.js
+        const Generated_Items = document.querySelectorAll('.scroll-list-box ul li');
 
-        // Assembly
-        Index_li.innerHTML = `${Button_Parts[0]}<p>${Name}</p><p>${Queue_Length_Count}</p><p>${Status}</p>${Button_Parts[1]}`;
-        Service_List.appendChild(Index_li);
-    }
+        Generated_Items.forEach((li, index) => {
+            const Inner_Button = li.querySelector('button');
+            if (!Inner_Button) {return;}
+
+            // Dashboard Specific Extra Info
+            const Queue_Length_Count = "NaN";
+            const Status = "NaN";
+
+            // Append the extra information strings seamlessly into the existing button structure
+            Inner_Button.innerHTML += `<p>${Queue_Length_Count}</p><p>${Status}</p>`;
+        });
+    });
 
 // Functions
 
