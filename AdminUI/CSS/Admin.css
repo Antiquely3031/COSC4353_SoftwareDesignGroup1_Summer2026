@@ -14,6 +14,9 @@
 }
 
 /* Body Section */
+
+* {  box-sizing: border-box;  }
+
 body 
 {
   /* Characterisitics */
@@ -84,6 +87,11 @@ header p
   font-size: 3.25rem;
   color: var(--text);
   margin: 3vh 0vw 0vh 2vw;
+}
+
+@media (max-width: 610px) 
+{
+  header p {  font-size: 1.75rem;  }
 }
 
   /* Hamburger Sidebar Menu */
