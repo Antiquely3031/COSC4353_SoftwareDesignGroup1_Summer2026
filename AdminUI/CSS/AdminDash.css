@@ -57,6 +57,24 @@
     text-align: left;
 }
 
+.scroll-list-box button p 
+{  
+  width: 30%;
+  text-align: center;
+}
+
+.scroll-list-box button p:nth-child(1) 
+{
+  text-align: left;
+  margin-right: 4.5%;
+}
+
+.scroll-list-box button p:nth-child(3) 
+{
+  text-align: right;
+  margin-left: 2.5%;
+}
+
 @media (max-width: 610px) 
 {
   .SLB-Title {  font-size: 1rem;  }
