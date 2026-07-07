@@ -12,6 +12,8 @@
         // Variables
         const Index_li = document.createElement('li');
         const Name = `Placeholder ${index}`;
+        const Queue_Length_Count = "NaN";
+        const Status = "NaN";
 
         // Shorthands
         const Button_Class = `button-feedback`;
@@ -23,7 +25,7 @@
         ];
 
         // Assembly
-        Index_li.innerHTML = `${Button_Parts[0]}<p>${Name}</p><p>NaN</p>${Button_Parts[1]}`;
+        Index_li.innerHTML = `${Button_Parts[0]}<p>${Name}</p><p>${Queue_Length_Count}</p><p>${Status}</p>${Button_Parts[1]}`;
         Service_List.appendChild(Index_li);
     }
 
@@ -68,7 +70,7 @@ function Service_Status_Change(Action_Button)
     
     // Modifications
     const Listed_Service = document.getElementById(`Button-Service-${Service_Name}`);
-    const LS_Status = Listed_Service.querySelector('p:nth-child(2)');
+    const LS_Status = Listed_Service.querySelector('p:nth-child(3)');
     
     LS_Status.textContent = Service_Status;
     SCB_Status.textContent = Service_Status;
