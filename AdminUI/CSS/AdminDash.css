@@ -1,25 +1,5 @@
 /* Scroll Box Section */
-
-.SLB-Title
-{
-  /* Dimensions */
-  width: 80vw;
-
-  /* Positioning */
-  display: flex;
-  text-align: center;
-  justify-content: space-between;
-
-  /* Characterisitcs */
-  color: var(--text);
-  font-size: 2rem;
-}
-
-.SLB-Title p 
-{
-  margin: 5px;
-  width: 30%;
-}
+.SLB-Title p {  width: 30%; }
 
 .SLB-Title p:nth-child(1) 
 {
@@ -31,47 +11,6 @@
 {
   text-align: right;
   margin-left: 3.5%;
-}
-
-.scroll-list-box
-{
-  /* Dimensions */
-  height: 30vh; 
-  width: 80vw;
-
-  /* Makes it scrollable */
-  overflow-y: auto; 
-  -webkit-overflow-scrolling: touch;
-}
-
-.scroll-list-box ul 
-{
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-}
-
-.scroll-list-box li { height: 5vh; }
-
-.scroll-list-box button 
-{
-  /* Dimensions */
-  height: 100%;
-  width: 100%;
-
-  /* Characterisitics */
-    border: 2px solid var(--card);
-    padding-inline: 10px;
-
-    /* Spacing */
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    /* Text */
-    color: var(--field);
-    font-size: 1.25rem;
-    text-align: left;
 }
 
 .scroll-list-box button p 
@@ -94,8 +33,6 @@
 
 @media (max-width: 610px) 
 {
-  .SLB-Title {  font-size: 1rem;  }
-
   .SLB-Title p:nth-child(2) {  width: 50%; }
 
   .scroll-list-box button {  font-size: 0.75rem;  }
@@ -107,7 +44,6 @@
 }
 
 /* Status Selection Section */
-
 .SCB-Title
 {
   /* Dimensions */

@@ -4,7 +4,7 @@
 
     Action_Buttons.forEach(button => {button.addEventListener("click", Service_Status_Change)});
 
-    // Getting and setting up the service list
+    // Getting and setting up the service list for the Dashboard
     const Service_List = document.querySelector('.scroll-list-box ul');
 
     for (let index = 1; index <= 30; index++) 
