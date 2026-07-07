@@ -15,7 +15,9 @@
             const Queue_Length_Count = "NaN";
             const Status = "NaN";
 
+            // Modifications
             Button.innerHTML += `<p>${Queue_Length_Count}</p><p>${Status}</p>`;
+            Button.onclick = function() {Service_Selected(Button);};
         });
     });
 
@@ -34,7 +36,7 @@ function Service_Selected(Service_Button)
 
     // Modifications
     SCB_Name.textContent = Service_Details[0];
-    SCB_Status.textContent = Service_Details[1];
+    SCB_Status.textContent = Service_Details[2];
 }
 
 function Service_Status_Change(Action_Button) 

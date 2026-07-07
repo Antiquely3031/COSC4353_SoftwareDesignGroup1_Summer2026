@@ -64,9 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Shorthands
         const Button_Class = `button-feedback`;
         const Button_Id = `Button-Service-${Name}`;
-        const Calling_Function = `Service_Selected(this)`;
         const Button_Parts = [
-            `<button type="button" class="${Button_Class}" id="${Button_Id}" onclick="${Calling_Function}">`, 
+            `<button type="button" class="${Button_Class}" id="${Button_Id}">`, 
             `</button>`
         ];
 
