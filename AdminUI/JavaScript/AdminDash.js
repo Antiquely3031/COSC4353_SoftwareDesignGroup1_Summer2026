@@ -5,24 +5,17 @@
     Action_Buttons.forEach(button => {button.addEventListener("click", Service_Status_Change)});
 
     document.addEventListener("DOMContentLoaded", () => {
-        // Startup just for the Dashboard
-        const Action_Buttons = document.querySelectorAll('#action-buttons button');
-
-        Action_Buttons.forEach(button => {button.addEventListener("click", Service_Status_Change)});
-
         // Target the list items already produced by Admin.js
-        const Generated_Items = document.querySelectorAll('.scroll-list-box ul li');
+        const Button_List = document.querySelectorAll('.scroll-list-box ul li');
 
-        Generated_Items.forEach((li, index) => {
-            const Inner_Button = li.querySelector('button');
-            if (!Inner_Button) {return;}
+        Button_List.forEach((li, index) => {
+            const Button = li.querySelector('button');
 
-            // Dashboard Specific Extra Info
+            // Require Information
             const Queue_Length_Count = "NaN";
             const Status = "NaN";
 
-            // Append the extra information strings seamlessly into the existing button structure
-            Inner_Button.innerHTML += `<p>${Queue_Length_Count}</p><p>${Status}</p>`;
+            Button.innerHTML += `<p>${Queue_Length_Count}</p><p>${Status}</p>`;
         });
     });
 
