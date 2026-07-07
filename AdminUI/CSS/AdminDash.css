@@ -138,12 +138,10 @@
 
 /* Button Feedback */
 
-.button-feedback:active 
-{
-  animation: quick-darken 0.25s ease-out;
-}
+.button-feedback:active {  animation: quick-darken 0.25s ease-out;  }
 
-@keyframes quick-darken {
+@keyframes quick-darken 
+{
   0% { filter: brightness(1); }
   20% { filter: brightness(0.5); }
   100% { filter: brightness(1); } 

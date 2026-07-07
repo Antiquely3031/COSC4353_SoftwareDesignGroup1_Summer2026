@@ -13,6 +13,7 @@
   --error: #e8836b;
 }
 
+/* Body Section */
 body 
 {
   /* Characterisitics */
@@ -23,16 +24,6 @@ body
   display: flex;
   align-items: center;
   flex-direction: column;
-}
-
-header
-{
-  /* Dimensions */
-  height: 12vh;
-  width: 100%;
-
-  /* Characterisitcs */
-  background-color: var(--ink);
 }
 
 .container 
@@ -61,3 +52,132 @@ header
   margin-bottom: 32px;
   padding: 22px 0px 22px 0px;
 }
+
+/* Header Section */
+header
+{
+  /* Dimensions */
+  height: 12vh;
+  width: 100%;
+
+  /* Positioning */
+  display: flex;
+
+  /* Characterisitcs */
+  background-color: var(--ink);
+}
+
+header img 
+{
+  height: 13vh;
+  position: relative;
+  margin: 1.5vh 0vw 0vh 2vw;
+}
+
+header p 
+{
+  /* Positioning */
+  display: flex;
+  align-items: center; 
+
+  /* Characterisitics */
+  font-size: 3.25rem;
+  color: var(--text);
+  margin: 3vh 0vw 0vh 2vw;
+}
+
+  /* Hamburger Sidebar Menu */
+  header nav 
+  {
+    /* Dimensions */
+    width: 10vw;
+
+    /* Positioning */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+
+  header nav button 
+  {
+    /* Position */
+    z-index: 3;
+    display: flex; 
+    cursor: pointer;
+    flex-direction: column;
+
+    /* Characterisitics */
+    background: transparent;
+    margin-left: 2.15vw;
+    border: none;
+    gap: 1vh; 
+  }
+
+
+  header nav button span 
+  {
+    width: 6vw; 
+    height: 1vh; 
+    background-color: white;
+    transition: all 0.3s ease;
+  }
+
+
+  header nav ul 
+  {
+    /* Dimensions */ 
+    height: 100vh;
+
+    /* Positions */
+    top: 0;
+    left: 0;
+    z-index: 3;
+    position: fixed;
+
+    /* Characterisitcs */
+    background-color: var(--card); 
+    padding: 2vh 8vw 2vh 5vw; 
+    list-style: none;
+    margin: 0px;
+      
+    /* Animations */
+    transform: translateX(-100%); 
+    transition: transform 0.3s ease-in-out;
+    box-shadow: 2px 0px 10px rgba(0, 0, 0, 0.5);
+  }
+
+  header nav ul li
+  {  
+    margin-bottom: 5vh;
+    width: inherit;  
+  }
+
+  header nav ul li p 
+  {
+    margin-left: 0px;
+    font-size: 2rem;
+  }
+
+  header nav ul li div 
+  {
+    /* Dimensions */
+    height: 0.5vh;
+    width: inherit;
+
+    /* Positioning */
+    position: relative;
+    margin: -2vh 0vw 0vh 0vw;
+
+    /* Characterisitics */
+    background-color: var(--border);
+  }
+
+  header nav ul li a 
+  {
+      color: white;
+      text-decoration: none;
+      font-size: 1.5rem;
+  }
+
+  header nav ul.active {  transform: translateX(0);  }
