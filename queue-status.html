@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset = "UTF-8">
+        <meta name = "viewport" content = "width=device-width, initial-scale=1.0">
+        <title>Queue Status></title>
+
+        <!--Shared user styling-->
+        <link rel="stylesheet" href="./QS-UserDashboard.css">
+        <!--Styling dedicated to this page-->
+        <link rel="stylesheet" href="./queue-status.css">
+    </head>
+
+    <body>
+        <header class = "top-header">
+            <div class="logo-area">
+                <img src="QueueSmartLogo.png" alt="QueueSmart Logo">
+            </div>
+
+            <h1>QueueSmart</h1>
+            <p>Queue Status</p>
+        </header>
+
+        <nav class ="navbar">
+            <a href="QS-UserDashboard.html">Dashboard</a>
+            <a href="join-queue.html">Join Queue</a>
+            <a href="queue-status.html">Queue Status</a>
+            <a href="history.html">History</a>
+            <a href="QSLoginScreen.html">Logout</a>   
+        </nav>
+
+        <main class="dashboard-container">
+
+            <section class="card">
+                <h2>Queue Status</h2>
+                <p><em>Now in queue</em></p>
+            </section>
+
+             <section class="card queue-status-card">
+
+            <h2>Welfare Check</h2>
+
+            <div class="status-information">
+
+                <div class="status-item">
+                    <span class="status-label">
+                        Current Position
+                    </span>
+
+                    <span class="status-value">
+                        12
+                    </span>
+                </div>
+
+
+                <div class="status-item">
+                    <span class="status-label">
+                        Estimated Wait
+                    </span>
+
+                    <span class="status-value">
+                        46 minutes
+                    </span>
+                </div>
+
+
+                <div class="status-item">
+                    <span class="status-label">
+                        Current Status
+                    </span>
+
+                    <span class="status-badge">
+                        Waiting
+                    </span>
+                </div>
+
+            </div>
+
+        </section>
+        </main>
+    </body>
+</html>
