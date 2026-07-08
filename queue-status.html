@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QueueSmart - Queue Status</title>
+
+    <!-- Shared theme and styles -->
+    <link rel="stylesheet" href="NotificationsUI/CSS/notifications.css">
+</head>
+
+<body>
+
+    <!-- NOTE: This is a placeholder. Created so the notification have a link to 
+         go to when pressed. -->
+
+    <header class="top-header">
+        <div class="logo-area">
+            <img src="QueueSmartLogo.png" alt="QueueSmart Logo">
+        </div>
+        <h1>QueueSmart</h1>
+        <p>Queue Status</p>
+    </header>
+
+    <nav class="navbar">
+        <a href="QS-UserDashboard.html">Dashboard</a>
+        <a href="join-queue.html">Join Queue</a>
+        <a href="queue-status.html" class="is-current">Queue Status</a>
+        <a href="history.html">History</a>
+        <a href="NotificationsUI/HTML/notifications.html">Notifications</a>
+        <a href="QSLoginScreen.html">Logout</a>
+    </nav>
+
+    <main class="dashboard-container">
+
+        <!-- Current status (mock data) -->
+        <section class="card">
+            <h2>Academic Advising</h2>
+
+            <p><strong>Your position in line</strong></p>
+            <p class="qs-position" id="qs-pos">3</p>
+
+            <p><strong>Estimated wait time:</strong> <span id="qs-wait">18 minutes</span></p>
+
+            <div class="qs-statusline">
+                <strong>Status:</strong>
+                <span class="qs-pill waiting" id="qs-status">Waiting</span>
+            </div>
+        </section>
+
+        <!-- Demo controls: triggers the popup notifications -->
+        <section class="card">
+            <h2>Simulate Queue Events</h2>
+            <p>Use these to see the pop-up notifications (mock actions for the demo).</p>
+
+            <div class="qs-buttons">
+                <button class="qs-btn qs-btn-primary" onclick="advanceQueue()">
+                    Move up one position
+                </button>
+                <button class="qs-btn" onclick="setStatus('almost-ready')">
+                    Set "Almost ready"
+                </button>
+                <button class="qs-btn" onclick="setStatus('served')">
+                    Set "Served"
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Shared notification logic (points back to this page) -->
+    <script src="NotificationsUI/JavaScript/notifications.js"
+            data-queue-status="queue-status.html"></script>
+
+    <!-- Page specific demo logic -->
+    <script>
+        var service = 'Academic Advising';
+        var position = 3;
+
+        function refresh() {
+            document.getElementById('qs-pos').textContent = position;
+            document.getElementById('qs-wait').textContent = (position * 6) + ' minutes';
+        }
+
+        // Move up a spot and diplay a position changed popup
+        function advanceQueue() {
+            if (position > 1) {
+                var from = position;
+                position -= 1;
+                refresh();
+                QSNotify.queueUpdate(service, from, position);
+            } else {
+                setStatus('almost-ready');
+            }
+        }
+
+        // Change the status badge and display a status changed popup.
+        function setStatus(status) {
+            var labels = { 'waiting': 'Waiting', 'almost-ready': 'Almost Ready', 'served': 'Served' };
+            var badge = document.getElementById('qs-status');
+            badge.textContent = labels[status] || status;
+            badge.className = 'qs-pill ' + status;
+            QSNotify.statusChange(service, status);
+        }
+
+        refresh();
+    </script>
+
+</body>
+
+</html>
