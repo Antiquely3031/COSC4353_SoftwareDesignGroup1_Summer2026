@@ -51,8 +51,8 @@ function Service_Status_Change(Action_Button)
         const Service_Status = Action_Button.target.textContent.trim();
 
     // Checks
-    if (Service_Name === "Select Service") {return;}
-    if (Service_Status == "Deselect") 
+    if (!(Service_Name !== "Select Service" && Service_Status !== SCB_Status.textContent.trim())) {return;}
+    if (Service_Status === "Deselect") 
     {
         // Alter Modifictions
         SCB_Name.textContent = "Select Service";
