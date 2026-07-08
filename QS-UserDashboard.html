@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>QueueSmart Dashboard</title>
+    <link rel = "stylesheet" href ="./QS-UserDashboard.css">
+</head>
+
+<body>
+<!-- PLACE HOLDER DATA AND SAMPLE FORMAT-->
+    <!--Logo image location-->
+
+    <header class="top-header">
+        <div class="logo-area">
+            <img src="QueueSmartLogo.png" alt="QueueSmart Logo">
+        </div>
+        <h1>QueueSmart</h1>
+        <p>Welcome, User!</p>
+    </header>
+
+    <nav class="navbar">
+        <a href="user-dashboard.html">Dashboard</a>
+        <a href="join-queue.html">Join Queue</a>
+        <a href="queue-status.html">Queue Status</a>
+        <a href="history.html">History</a>
+        <a href="QSLoginScreen.html">Logout</a>
+    </nav>
+    <main class="dashboard-container">
+
+        <section class="card">
+            <h2>Welcome Back</h2>
+            <p>View your current queue status, available services, and recent notifications.</p>
+        </section>
+
+        <!-- Current Queue Status Reminder that values seen are placeholder -->
+        <section class="card">
+            <h2>Waiting Status</h2>
+            <p><strong>Service:</strong> Welfare check</p>
+            <p><strong>Current Position:</strong> 12</p>
+            <p><strong>Estimated Wait Time (minutes):</strong> 46</p>
+            <p><strong>Status:</strong> <span class="status-badge">Waiting</span></p>
+        </section>
+
+        <!-- Selecting Available Services-->
+        <section class="card">
+            <h2>Available Services</h2>
+
+            <div class="service-grid">
+                <div class="service-card">
+                    <h3>Advising things</h3>
+                    <p>Estimated wait: 18 minutes</p>
+                    <a href="join-queue.html">Join Queue</a>
+                </div>
+            <div class="service-grid">
+                <div class="service-card">
+                    <h3>Welfare check</h3>
+                    <p>Estimated wait: 46 minutes</p>
+                    <a href="join-queue.html">Join Queue</a>
+                </div>
+            </div>
+        </section>
+        <!-- History/Notifications-->
+        <section class="card">
+            <h2>Notifications</h2>
+            <ul class="notification-list">
+                <li>Your queue position changed from 4 to 3.</li>
+                <li>You are currently waiting for Academic Advising.</li>
+                <li>You will be notified when your turn is approaching.</li>
+            </ul>
+        </section>
+
+    </main>
+
+</body>
+</html>
