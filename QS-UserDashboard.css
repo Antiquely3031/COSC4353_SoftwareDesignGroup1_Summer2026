@@ -69,16 +69,15 @@ body {
     color: var(--text);
 }
 .service-grid {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
-    flex-wrap: wrap;
 }
+
 .service-card {
     background-color: var(--field);
     padding: 18px;
     border-radius: 12px;
-    flex: 1;
-    min-width: 220px;
     border: 1px solid var(--border);
 }
 .service-card h3 {
