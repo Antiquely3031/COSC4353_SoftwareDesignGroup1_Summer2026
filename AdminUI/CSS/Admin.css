@@ -14,7 +14,6 @@
 }
 
 /* Button Feedback */
-
 .button-feedback:active {  animation: quick-darken 0.25s ease-out;  }
 
 @keyframes quick-darken 
@@ -264,4 +263,39 @@ header nav ul.active {  transform: translateX(0);  }
   .SLB-Title {  font-size: 1rem;  }
 
   .scroll-list-box button {  font-size: 0.75rem;  }
+}
+
+/* Action Buttons */
+#action-buttons 
+{
+  height: 24vh;
+  margin-top: 2vh;
+  
+  display: flex;
+  align-content: center;
+  flex-direction: column;
+}
+
+#AB-apply-to-service
+{
+  /* Dimensions */
+  width: 100%;               
+  height: 11vh;
+
+  /* Positioning */
+  display: flex;
+  margin-bottom: 16px;              
+  justify-content: space-between; 
+}
+
+#AB-apply-to-service button 
+{
+  /* Dimensions */
+  height: 100%;
+  width: 47.5%;
+
+  /* Characterisitics */
+  box-sizing: border-box;
+  border-radius: 14px;
+  font-size: 2rem;
 }

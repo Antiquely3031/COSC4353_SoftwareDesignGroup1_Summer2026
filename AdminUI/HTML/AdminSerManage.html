@@ -49,5 +49,38 @@
             <span class="SLB-Title"><p>Services</p></span>
             <div class="scroll-list-box"><ul></ul></div>
         </section>
+
+        <section class="container" id="input-form">
+            <form id="service-detial-form">
+                <label for="name-field">Service Name</label><br>
+                    <input type="text" id="name-field" name="name-field"><br>
+
+                <label for="description-box">Description</label><br>
+                    <textarea id="description-box" name="description-box"></textarea><br>
+
+                <label for="expection-time-field">Expected Duration</label>
+                    <input type="text" id="expection-time-field" name="expection-time-field"><br>
+
+                <label for="caste-level-radios">Priority Level</label><br>
+                    <input type="radio" id="PS-low" name="priority-status" value="Low">
+                    <label for="PS-low">Low</label><br>
+                    <input type="radio" id="PS-mid" name="priority-status" value="Medium">
+                    <label for="PS-mid">Medium</label><br>
+                    <input type="radio" id="PS-high" name="priority-status" value="High">
+                    <label for="PS-high">High</label><br>
+
+                <span id="action-buttons">
+                    <span id="AB-apply-to-service">
+                        <button class="button-feedback">Create</button>
+                        <button class="button-feedback">Delete</button>
+                    </span>
+                    
+                    <span id="AB-apply-to-service">
+                        <button class="button-feedback">Save</button>
+                        <button class="button-feedback">Deselect</button>
+                    </span>
+                </span>
+            </form>
+        </section>
     </body>
 </html>

@@ -1,0 +1,31 @@
+form 
+{
+    /* Dimensions */
+    width: 80vw;
+
+    /* Positioning */
+    display: flex;
+    flex-direction: column;
+
+    /* Characterisitics */
+        /* Text */
+        color: var(--text);
+        font-size: 1.75rem;
+}
+
+textarea 
+{
+    /* Dimensiosns */
+    width: 100%;
+}
+
+input 
+{
+    /* Dimensiosns */
+    height: 2vh;
+    width: 100%;
+
+    /* Positioning */
+
+    /* Characterisitics */
+}

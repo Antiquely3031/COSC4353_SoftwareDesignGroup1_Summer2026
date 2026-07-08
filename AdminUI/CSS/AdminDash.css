@@ -76,33 +76,6 @@
 
 .status-change-box span p { margin: 0px 6px 0px 0px;}
 
-#action-buttons 
-{
-  height: 24vh;
-  margin-top: 2vh;
-  
-  display: flex;
-  align-content: center;
-  flex-direction: column;
-}
-
-#AB-apply-to-service
-{
-  height: 12vh;
-  justify-content: space-between;
-}
-
-#AB-apply-to-service button 
-{
-  /* Dimensions */
-  width: 47.5%;
-
-  /* Characterisitics */
-  box-sizing: border-box;
-  border-radius: 14px;
-  font-size: 2rem;
-}
-
 #SCB-AB-Open { background-color: greenyellow; }
 
 #SCB-AB-Close { background-color: #DE3163; }
@@ -111,7 +84,6 @@
 {
   background-color: var(--error);
   border-radius: 14px;
-  margin-top: 4px;
   font-size: 2rem;
   height:45%;
 }
