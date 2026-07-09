@@ -80,9 +80,8 @@
 
 #SCB-AB-Close { background-color: #DE3163; }
 
-#SCB-AB-Deselect 
+#AB-Deselect 
 {
-  background-color: var(--error);
   border-radius: 14px;
   font-size: 2rem;
   height:45%;

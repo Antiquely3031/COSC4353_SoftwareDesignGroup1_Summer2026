@@ -299,3 +299,5 @@ header nav ul.active {  transform: translateX(0);  }
   border-radius: 14px;
   font-size: 2rem;
 }
+
+#AB-Deselect {  background-color: var(--error); }

@@ -51,33 +51,40 @@
         </section>
 
         <section class="container" id="input-form">
+            <p class="SLB-Title">Service's Profile</p>
             <form id="service-detial-form">
-                <label for="name-field">Service Name</label><br>
-                    <input type="text" id="name-field" name="name-field"><br>
+                <span id="essential-fields">
+                    <label for="name-field">Service Name</label><br>
+                    <input type="text" id="name-field" name="name-field" placeholder="Select/Write in/Create name of Service"><br>
 
-                <label for="description-box">Description</label><br>
-                    <textarea id="description-box" name="description-box"></textarea><br>
+                    <label for="description-box">Description</label><br>
+                    <textarea id="description-box" name="description-box" placeholder="Write description of the service"></textarea><br>
 
-                <label for="expection-time-field">Expected Duration</label>
-                    <input type="text" id="expection-time-field" name="expection-time-field"><br>
+                    <label for="expection-time-field">Expected Duration:</label>
+                    <span id="IF-Time-Units">
+                        <input type="number" id="expection-time-field" name="expection-time-field" placeholder="0">
+                        <p>minutes</p>
+                    </span><br>
+                </span>
 
-                <label for="caste-level-radios">Priority Level</label><br>
-                    <input type="radio" id="PS-low" name="priority-status" value="Low">
-                    <label for="PS-low">Low</label><br>
-                    <input type="radio" id="PS-mid" name="priority-status" value="Medium">
-                    <label for="PS-mid">Medium</label><br>
-                    <input type="radio" id="PS-high" name="priority-status" value="High">
-                    <label for="PS-high">High</label><br>
+                <span id="radios">
+                    <label for="caste-level-radios">Priority Level</label><br>
+                    <div class="radio-group-row">
+                        <label><input type="radio" id="PS-low" name="priority-status" value="Low"> Low</label>
+                        <label><input type="radio" id="PS-mid" name="priority-status" value="Medium"> Medium</label>
+                        <label><input type="radio" id="PS-high" name="priority-status" value="High"> High</label>
+                    </div>
+                </span>
 
                 <span id="action-buttons">
                     <span id="AB-apply-to-service">
-                        <button class="button-feedback">Create</button>
-                        <button class="button-feedback">Delete</button>
+                        <button class="button-feedback" id="ABATSSB-create">Create</button>
+                        <button class="button-feedback" id="ABATSSB-delete">Delete</button>
                     </span>
                     
                     <span id="AB-apply-to-service">
-                        <button class="button-feedback">Save</button>
-                        <button class="button-feedback">Deselect</button>
+                        <button class="button-feedback" id="ABATSSB-save">Save</button>
+                        <button class="button-feedback" id="AB-Deselect">Deselect</button>
                     </span>
                 </span>
             </form>
