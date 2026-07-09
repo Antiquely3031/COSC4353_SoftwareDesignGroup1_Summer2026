@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QueueSmart - Join Queue</title>
+
+    <!-- Shared user-side styling -->
+    <link rel="stylesheet" href="./QS-UserDashboard.css">
+
+    <!-- Styling specific to this page -->
+    <link rel="stylesheet" href="./join-queue.css">
+</head>
+<body>
+    <!-- Same header used by the User Dashboard -->
+    <header class="top-header">
+        <div class="logo-area">
+            <img src="QueueSmartLogo.png" alt="QueueSmart Logo"></div>
+        <h1>QueueSmart</h1>
+        <p>Join a Queue</p>
+
+    </header>
+    <!-- Same navigation used on all User pages -->
+    <nav class="navbar">
+        <a href="QS-UserDashboard.html">Dashboard</a>
+        <a href="QS-JoinQueue.html">Join Queue</a>
+        <a href="queue-status.html">Queue Status </a>   
+        <a href="queue-history.html">History </a>
+        <a href="QSLoginScreen.html">Logout</a>
+    </nav>
+    <main class="dashboard-container">
+        <!-- Page introduction -->
+        <section class="card">
+            <h2>Join a Queue</h2>
+            <p>Select an available service to view its estimated wait time.</p>
+        </section>
+        <!-- Service selection form -->
+        <section class="card">
+            <h2>Select a Service</h2>
+            <form id="joinQueueForm">
+                <div class="form-group">
+                    <label for="service">
+                        Available Service
+                    </label>
+                    <select id="service" name="service" required>
+                        <option value="">Select a service</option>
+                        <option value="advising">Advising Things</option>
+                        <option value="welfare">Welfare Check</option>     
+                    </select>
+                </div>
+                <!--wait-time information -->
+                <div class="queue-preview">
+                    <h3>Queue Information</h3>
+                    <p>
+                        <strong>Selected Service:</strong>
+                        <span id="selectedService">None selected</span>
+                    </p>
+
+                    <p>
+                        <strong>Estimated Wait Time:</strong>
+                        <span id="estimatedWait">Select a service</span>
+                    </p>
+                </div>
+                <div class="queue-actions">
+                    <button type="submit" class="join-button">Join Queue</button>
+                    <button type="button" class="leave-button">Leave Queue</button>
+                </div>
+            </form>
+        </section>
+        <!-- Mock current status -->
+        <section class="card">
+            <h2>Queue Status</h2>
+            <p id="queueMessage">You are not currently waiting in a queue.</p>
+        </section>
+    </main>
+</body>
+</html>
