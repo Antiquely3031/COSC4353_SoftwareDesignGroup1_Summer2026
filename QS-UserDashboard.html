@@ -24,6 +24,7 @@
         <a href="join-queue.html">Join Queue</a>
         <a href="queue-status.html">Queue Status</a>
         <a href="history.html">History</a>
+        <a href="NotificationsUI/HTML/notifications.html">Notifications</a>
         <a href="QSLoginScreen.html">Logout</a>
     </nav>
     <main class="dashboard-container">
@@ -62,15 +63,16 @@
         </section>
         <!-- History/Notifications-->
         <section class="card">
-            <h2>Notifications</h2>
-            <ul class="notification-list">
-                <li>Your queue position changed from 4 to 3.</li>
-                <li>You are currently waiting for Academic Advising.</li>
-                <li>You will be notified when your turn is approaching.</li>
-            </ul>
+            <h2>Notifications
+                <a class="qs-viewall" href="NotificationsUI/HTML/notifications.html">View all &rarr;</a>
+                <ul id="qs-notify-dashboard" class="qs-list"></ul>
+            </h2>
         </section>
 
     </main>
+    <!-- Shared notification logic and data -->
+    <script src="NotificationsUI/JavaScript/notifications.js"
+            data-queue-status="queue-status.html"></script>
 
 </body>
 </html>
