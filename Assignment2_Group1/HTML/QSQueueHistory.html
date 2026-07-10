@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queue History</title>
+
+    <!-- Reusing user-side styling (User Dashboard)-->
+    <link rel="stylesheet" href="./QS-UserDashboard.css">
+    <!-- dedicated styling-->
+    <link rel="stylesheet" href="./queue-history.css">
+</head>
+
+<body>
+    <header class="top-header">
+        <div class="logo-area">
+            <img src="QueueSmartLogo.png" alt="QueueSmart Logo">
+        </div>
+        <h1>QueueSmart</h1>
+        <p>Viewing previous queue requests</p>
+    </header>
+
+    <nav class="navbar">
+        <a href="QS-UserDashboard.html">Dashboard</a>
+        <a href="QS-JoinQueue.html">Join Queue</a>
+        <a href="queue-status.html">Queue Status </a>
+        <a href="queue-history.html">History </a>
+        <a href="QSLoginScreen.html">Logout</a>
+    </nav>
+
+    <main class="dashboard-container">
+        <section class="card">
+            <h2>Queue History</h2>
+            <p>Viewing past queue entries and their statuses.</p>
+        </section>
+
+        <section class="card">
+    <h2>Previous Queue Requests</h2>
+
+    <div class="history-list">
+
+        <!-- Column headings -->
+        <div class="history-row history-header">
+            <span>Service</span>
+            <span>Date</span>
+            <span>Time</span>
+            <span>Status</span>
+        </div>
+
+        <!-- Queue record 1 -->
+        <div class="history-row">
+            <span>Welfare Check</span>
+            <span>2024-06-01</span>
+            <span>10:30 AM</span>
+            <span class="outcome completed">Completed</span>
+        </div>
+
+        <!-- Queue record 2 -->
+        <div class="history-row">
+            <span>Advising Things</span>
+            <span>2024-06-02</span>
+            <span>11:00 AM</span>
+            <span class="outcome canceled">Cancelled</span>
+        </div>
+
+    </div>
+</section>
+        <section class="card">
+            <h2>History Summary</h2>
+            <div class="history-summary">
+                <div class="summary-item"> 
+                    <span class="summary-number">4</span> 
+                    <span class="summary-label"> Total Queues</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-number">2</span> 
+                    <span class="summary-label"> Served</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-number">1</span>
+                    <span class="summary-label">Canceled</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-number">1</span>
+                    <span class="summary-label"> No Show</span>
+                </div>
+            </div>
+        </section>
+    </main>
+</body>
+
+
+</html>
