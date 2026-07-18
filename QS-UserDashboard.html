@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QueueSmart Dashboard</title>
-    <link rel = "stylesheet" href ="./QS-UserDashboard.css">
+    <link rel="stylesheet" href="./QS-UserDashboard.css">
+    <script src="./QS-User.js" defer></script>
 </head>
 
 <body>
-<!-- PLACE HOLDER DATA AND SAMPLE FORMAT-->
     <!--Logo image location-->
-
     <header class="top-header">
         <div class="logo-area">
             <img src="QueueSmartLogo.png" alt="QueueSmart Logo">
@@ -23,10 +23,10 @@
         <a href="user-dashboard.html">Dashboard</a>
         <a href="join-queue.html">Join Queue</a>
         <a href="queue-status.html">Queue Status</a>
-        <a href="history.html">History</a>
+        <a href="queue-history.html">History</a>
         <a href="QSLoginScreen.html">Logout</a>
     </nav>
-    <main class="dashboard-container">
+    <main id="dashboardPage" class="dashboard-container">
 
         <section class="card">
             <h2>Welcome Back</h2>
@@ -34,12 +34,28 @@
         </section>
 
         <!-- Current Queue Status Reminder that values seen are placeholder -->
+        <!-- Modified queue status display -->
         <section class="card">
             <h2>Waiting Status</h2>
-            <p><strong>Service:</strong> Welfare check</p>
-            <p><strong>Current Position:</strong> 12</p>
-            <p><strong>Estimated Wait Time (minutes):</strong> 46</p>
-            <p><strong>Status:</strong> <span class="status-badge">Waiting</span></p>
+            <p>
+                <strong>Service:</strong>
+                <span id="dashboardService">No active queue</span>
+            </p>
+
+            <p>
+                <strong>Current Position:</strong>
+                <span id="dashboardPosition">--</span>
+            </p>
+
+            <p>
+                <strong>Estimated Wait Time:</strong>
+                <span id="dashboardWaitTime">--</span> minutes
+            </p>
+
+            <p>
+                <strong>Status:</strong>
+                <span id="dashboardStatus" class="status-badge">Not Joined</span>
+            </p>
         </section>
 
         <!-- Selecting Available Services-->
@@ -48,29 +64,28 @@
 
             <div class="service-grid">
                 <div class="service-card">
-                    <h3>Advising things</h3>
+                    <h3>Advising academics</h3>
                     <p>Estimated wait: 18 minutes</p>
                     <a href="join-queue.html">Join Queue</a>
                 </div>
-            <div class="service-grid">
-                <div class="service-card">
-                    <h3>Welfare check</h3>
-                    <p>Estimated wait: 46 minutes</p>
-                    <a href="join-queue.html">Join Queue</a>
+                <div class="service-grid">
+                    <div class="service-card">
+                        <h3>Welfare check</h3>
+                        <p>Estimated wait: 46 minutes</p>
+                        <a href="join-queue.html">Join Queue</a>
+                    </div>
                 </div>
-            </div>
         </section>
         <!-- History/Notifications-->
         <section class="card">
             <h2>Notifications</h2>
-            <ul class="notification-list">
-                <li>Your queue position changed from 4 to 3.</li>
-                <li>You are currently waiting for Academic Advising.</li>
-                <li>You will be notified when your turn is approaching.</li>
+            <ul id="dashboardNotifications" class="notification-list">
+                <li>No notifications</li>
             </ul>
         </section>
 
     </main>
 
 </body>
+
 </html>
