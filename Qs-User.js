@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () =>
 {
     if(document.getElementById("joinQueuePage"))
     {
-        JoinQueuePage();
+        setupJoinQueuePage();
     }
     if(document.getElementById("dashboardPage"))
     {
@@ -44,11 +44,11 @@ document.addEventListener("DOMContentLoaded", () =>
     }
     if(document.getElementById("queueStatusPage"))
     {
-        QueueStatusPage();
+        setupQueueStatusPage();
     }
     if(document.getElementById("historyPage"))
     {
-        HistoryPage();
+        setupHistoryPage();
     }
 });
 //Join Queue Page
