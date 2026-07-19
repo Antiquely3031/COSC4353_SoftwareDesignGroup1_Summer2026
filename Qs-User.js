@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 });
 //Join Queue Page
-function JoinQueuePage()
+function setupJoinQueuePage()
 {
     const serviceSelect = document.getElementById("serviceSelect");
     const selectedService = document.getElementById("selectedService");
@@ -134,7 +134,7 @@ function JoinQueuePage()
 }
 
 //dashboard page
-function DashboardPage()
+function setupDashboardPage()
 {
     const currentQueue = getCurrentQueue();
 
@@ -157,7 +157,7 @@ function DashboardPage()
 }
 
 //queue status page
-function QueueStatusPage()
+function setupQueueStatusPage()
 {
     const currentQueue = getCurrentQueue();
     const serviceName = document.getElementById("dashboardService");
@@ -178,45 +178,80 @@ function QueueStatusPage()
     }
 }
 
-//history page
-function HistoryPage()
-{
-    const historyBody = document.getElementById("historyBody");
+//queue history page
+function setupHistoryPage() {
+    const historyListBody = document.getElementById("historyListBody");
 
-    if(!historyBody) {
+    const summaryTotal = document.getElementById("summaryTotal");
+    const summaryServed = document.getElementById("summaryServed");
+    const summaryCanceled = document.getElementById("summaryCanceled");
+    const summaryNoShow = document.getElementById("summaryNoShow");
+
+    if (!historyListBody) {
         return;
     }
 
     const history = getHistory();
 
-    historyBody.innerHTML = "";
+    historyListBody.innerHTML = "";
+
     if (history.length === 0) {
-        historyBody.innerHTML = `
-            <tr>
-                <td colspan="4">No queue history available.</td>
-            </tr>
+        historyListBody.innerHTML = `
+            <div class="history-row">
+                <span>No queue history available.</span>
+                <span>--</span>
+                <span>--</span>
+                <span>--</span>
+            </div>
         `;
+
+        if (summaryTotal) summaryTotal.textContent = 0;
+        if (summaryServed) summaryServed.textContent = 0;
+        if (summaryCanceled) summaryCanceled.textContent = 0;
+        if (summaryNoShow) summaryNoShow.textContent = 0;
+
         return;
     }
 
+    let servedCount = 0;
+    let canceledCount = 0;
+    let noShowCount = 0;
+
     history.forEach(record => {
-        const row = document.createElement("tr");
+        if (record.status.toLowerCase() === "served" || record.status.toLowerCase() === "completed") {
+            servedCount++;
+        }
+
+        if (record.status.toLowerCase() === "canceled" || record.status.toLowerCase() === "cancelled") {
+            canceledCount++;
+        }
+
+        if (record.status.toLowerCase() === "no show") {
+            noShowCount++;
+        }
+
+        const row = document.createElement("div");
+        row.classList.add("history-row");
 
         row.innerHTML = `
-            <td>${record.serviceName}</td>
-            <td>${record.date}</td>
-            <td>${record.time}</td>
-            <td>
-                <span class="outcome ${record.statusClass}">
-                    ${record.status}
-                </span>
-            </td>
+            <span>${record.serviceName}</span>
+            <span>${record.date}</span>
+            <span>${record.time}</span>
+            <span class="outcome ${record.statusClass}">
+                ${record.status}
+            </span>
         `;
 
-        historyBody.appendChild(row);
-    }); 
-}
+        historyListBody.appendChild(row);
+    });
 
+    if (summaryTotal) summaryTotal.textContent = history.length;
+    if (summaryServed) summaryServed.textContent = servedCount;
+    if (summaryCanceled) summaryCanceled.textContent = canceledCount;
+    if (summaryNoShow) summaryNoShow.textContent = noShowCount;
+}
+//----------------------------
+//Helper functions
 function getCurrentQueue() {
     const queueData = localStorage.getItem("currentQueue");
 
