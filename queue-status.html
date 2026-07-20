@@ -9,6 +9,8 @@
         <link rel="stylesheet" href="./QS-UserDashboard.css">
         <!--Styling dedicated to this page-->
         <link rel="stylesheet" href="./queue-status.css">
+
+        <script src="./QS-User.js" defer></script>
     </head>
 
     <body>
@@ -29,11 +31,11 @@
             <a href="QSLoginScreen.html">Logout</a>   
         </nav>
 
-        <main class="dashboard-container">
+        <main id = "queueStatusPage" class="dashboard-container">
 
             <section class="card">
                 <h2>Queue Status</h2>
-                <p><em>Now in queue</em></p>
+                <p><em>Viewing status of queue position, wait time, service operations</em></p>
             </section>
 
              <section class="card queue-status-card">
@@ -42,36 +44,22 @@
 
             <div class="status-information">
 
-                <div class="status-item">
-                    <span class="status-label">
-                        Current Position
-                    </span>
-
-                    <span class="status-value">
-                        12
-                    </span>
+                <div class="status-row">
+                    <span class="status-label">Current Position</span>
+                    <span id="statusPosition" class="status-value">--</span>
                 </div>
 
 
-                <div class="status-item">
-                    <span class="status-label">
-                        Estimated Wait
-                    </span>
-
-                    <span class="status-value">
-                        46 minutes
-                    </span>
+                <div class="status-row">
+                    <span class="status-label">Estimated Wait</span>
+                    <span id="statusWaitTime" class="status-value">46 minutes</span>
                 </div>
 
 
-                <div class="status-item">
-                    <span class="status-label">
-                        Current Status
-                    </span>
+                <div class="status-row">
+                    <span class="status-label">Current Status</span>
 
-                    <span class="status-badge">
-                        Waiting
-                    </span>
+                    <span id="statusCurrent" class="status-badge">Not Joined</span>
                 </div>
 
             </div>
