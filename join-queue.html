@@ -10,7 +10,11 @@
 
     <!-- Styling specific to this page -->
     <link rel="stylesheet" href="./join-queue.css">
+    
+    <!-- queue  script-->
+    <script src="./QS-User.js" defer></script>
 </head>
+
 <body>
     <!-- Same header used by the User Dashboard -->
     <header class="top-header">
@@ -23,12 +27,12 @@
     <!-- Same navigation used on all User pages -->
     <nav class="navbar">
         <a href="QS-UserDashboard.html">Dashboard</a>
-        <a href="QS-JoinQueue.html">Join Queue</a>
+        <a href="join-queue.html">Join Queue</a>
         <a href="queue-status.html">Queue Status </a>   
         <a href="queue-history.html">History </a>
         <a href="QSLoginScreen.html">Logout</a>
     </nav>
-    <main class="dashboard-container">
+    <main id = "joinQueuePage" class="dashboard-container">
         <!-- Page introduction -->
         <section class="card">
             <h2>Join a Queue</h2>
@@ -37,15 +41,16 @@
         <!-- Service selection form -->
         <section class="card">
             <h2>Select a Service</h2>
+            <!--Modifications for the QS-user script in order for the join queue to function correctly (7/17/2026)-->
             <form id="joinQueueForm">
                 <div class="form-group">
-                    <label for="service">
+                    <label for="serviceSelect">
                         Available Service
                     </label>
-                    <select id="service" name="service" required>
+                    <select id="serviceSelect" name="serviceSelect" required>
                         <option value="">Select a service</option>
-                        <option value="advising">Advising Things</option>
-                        <option value="welfare">Welfare Check</option>     
+                        <option value="advising" data-wait="18">Advising Academics</option>
+                        <option value="welfare" data-wait="46">Welfare Check</option>     
                     </select>
                 </div>
                 <!--wait-time information -->
@@ -62,15 +67,15 @@
                     </p>
                 </div>
                 <div class="queue-actions">
-                    <button type="submit" class="join-button">Join Queue</button>
-                    <button type="button" class="leave-button">Leave Queue</button>
+                    <button type="submit" id="joinQueueButton" class="join-button">Join Queue</button>
+                    <button type="button" id="leaveQueueButton" class="leave-button">Leave Queue</button>
                 </div>
             </form>
         </section>
         <!-- Mock current status -->
         <section class="card">
             <h2>Queue Status</h2>
-            <p id="queueMessage">You are not currently waiting in a queue.</p>
+            <p id="joinQueueMessage">You are not currently waiting in a queue.</p>
         </section>
     </main>
 </body>
