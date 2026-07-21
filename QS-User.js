@@ -1,6 +1,4 @@
 //PART 3: Queue management module
-
-const baseAPI = "https://localhost:3000/api";
 // Placeholder user ID because there is no real database/authentication yet
 const userID = 1;
 
