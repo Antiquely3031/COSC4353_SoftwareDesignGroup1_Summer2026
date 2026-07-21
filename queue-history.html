@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="./QS-UserDashboard.css">
     <!-- dedicated styling-->
     <link rel="stylesheet" href="./queue-history.css">
+
+    <script src="./QS-User.js" defer></script>
 </head>
 
 <body>
@@ -23,67 +25,64 @@
 
     <nav class="navbar">
         <a href="QS-UserDashboard.html">Dashboard</a>
-        <a href="QS-JoinQueue.html">Join Queue</a>
+        <a href="join-queue.html">Join Queue</a>
         <a href="queue-status.html">Queue Status </a>
         <a href="queue-history.html">History </a>
         <a href="QSLoginScreen.html">Logout</a>
     </nav>
 
-    <main class="dashboard-container">
+    <main id="historyPage" class="dashboard-container">
         <section class="card">
             <h2>Queue History</h2>
             <p>Viewing past queue entries and their statuses.</p>
         </section>
 
         <section class="card">
-    <h2>Previous Queue Requests</h2>
+            <h2>Previous Queue Requests</h2>
 
-    <div class="history-list">
+            <div class="history-list">
 
-        <!-- Column headings -->
-        <div class="history-row history-header">
-            <span>Service</span>
-            <span>Date</span>
-            <span>Time</span>
-            <span>Status</span>
-        </div>
+                <!-- Column headings -->
+                <div class="history-row history-header">
+                    <span>Service</span>
+                    <span>Date</span>
+                    <span>Time</span>
+                    <span>Status</span>
+                </div>
+                <!-- modification for assignment 3 for dynamic content-->
+                <div id="historyListBody">
+                    <div class="history-row">
+                        <span>No queue history available.</span>
+                        <span>--</span>
+                        <span>--</span>
+                        <span>--</span>
+                    </div>
+                </div>
 
-        <!-- Queue record 1 -->
-        <div class="history-row">
-            <span>Welfare Check</span>
-            <span>2024-06-01</span>
-            <span>10:30 AM</span>
-            <span class="outcome completed">Completed</span>
-        </div>
-
-        <!-- Queue record 2 -->
-        <div class="history-row">
-            <span>Advising Things</span>
-            <span>2024-06-02</span>
-            <span>11:00 AM</span>
-            <span class="outcome canceled">Cancelled</span>
-        </div>
-
-    </div>
-</section>
+            </div>
+        </section>
         <section class="card">
             <h2>History Summary</h2>
             <div class="history-summary">
-                <div class="summary-item"> 
-                    <span class="summary-number">4</span> 
-                    <span class="summary-label"> Total Queues</span>
-                </div>
+
                 <div class="summary-item">
-                    <span class="summary-number">2</span> 
-                    <span class="summary-label"> Served</span>
+                    <span id="summaryTotal" class="summary-number">0</span>
+                    <span class="summary-label">Total Queues</span>
                 </div>
+
                 <div class="summary-item">
-                    <span class="summary-number">1</span>
+                    <span id="summaryServed" class="summary-number">0</span>
+                    <span class="summary-label">Served</span>
+                </div>
+
+                <div class="summary-item">
+                    <span id="summaryCanceled" class="summary-number">0</span>
                     <span class="summary-label">Canceled</span>
                 </div>
+
                 <div class="summary-item">
-                    <span class="summary-number">1</span>
-                    <span class="summary-label"> No Show</span>
+                    <span id="summaryNoShow" class="summary-number">0</span>
+                    <span class="summary-label">No Show</span>
                 </div>
             </div>
         </section>

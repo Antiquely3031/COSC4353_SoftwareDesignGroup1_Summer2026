@@ -1,46 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset = "UTF-8">
-        <meta name = "viewport" content = "width=device-width, initial-scale=1.0">
-        <title>Queue Status></title>
 
-        <!--Shared user styling-->
-        <link rel="stylesheet" href="./QS-UserDashboard.css">
-        <!--Styling dedicated to this page-->
-        <link rel="stylesheet" href="./queue-status.css">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queue Status</title>
 
-        <script src="./QS-User.js" defer></script>
-    </head>
+    <!--Shared user styling-->
+    <link rel="stylesheet" href="./QS-UserDashboard.css">
+    <!--Styling dedicated to this page-->
+    <link rel="stylesheet" href="./queue-status.css">
 
-    <body>
-        <header class = "top-header">
-            <div class="logo-area">
-                <img src="QueueSmartLogo.png" alt="QueueSmart Logo">
-            </div>
+    <script src="./QS-User.js" defer></script>
+</head>
 
-            <h1>QueueSmart</h1>
-            <p>Queue Status</p>
-        </header>
+<body>
+    <header class="top-header">
+        <div class="logo-area">
+            <img src="QueueSmartLogo.png" alt="QueueSmart Logo">
+        </div>
 
-        <nav class ="navbar">
-            <a href="QS-UserDashboard.html">Dashboard</a>
-            <a href="join-queue.html">Join Queue</a>
-            <a href="queue-status.html">Queue Status</a>
-            <a href="queue-history.html">History</a>
-            <a href="QSLoginScreen.html">Logout</a>   
-        </nav>
+        <h1>QueueSmart</h1>
+        <p>Queue Status</p>
+    </header>
 
-        <main id = "queueStatusPage" class="dashboard-container">
+    <nav class="navbar">
+        <a href="QS-UserDashboard.html">Dashboard</a>
+        <a href="join-queue.html">Join Queue</a>
+        <a href="queue-status.html">Queue Status</a>
+        <a href="queue-history.html">History</a>
+        <a href="QSLoginScreen.html">Logout</a>
+    </nav>
 
-            <section class="card">
-                <h2>Queue Status</h2>
-                <p><em>Viewing status of queue position, wait time, service operations</em></p>
-            </section>
+    <main id="queueStatusPage" class="dashboard-container">
 
-             <section class="card queue-status-card">
+        <section class="card">
+            <h2>Queue Status</h2>
+            <p><em>Viewing status of queue position, wait time, service operations</em></p>
+        </section>
 
-            <h2>Welfare Check</h2>
+        <section class="card queue-status-card">
+
+            <h2 id="statusService">No active queue currently</h2>
 
             <div class="status-information">
 
@@ -65,6 +66,7 @@
             </div>
 
         </section>
-        </main>
-    </body>
+    </main>
+</body>
+
 </html>
