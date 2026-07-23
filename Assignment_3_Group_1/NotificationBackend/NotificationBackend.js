@@ -68,7 +68,8 @@ function validateNotification(data) {
 
 /* Creates and stores a notification
    Returns {ok: true, notification}  on success
-*/         { ok: false, errors: [...] } if validation fails.
+           {ok: false, errors: [...]} if validation fails
+*/
 function createNotification(data) {
   const errors = validateNotification(data);
   if (errors.length > 0) {
@@ -111,9 +112,9 @@ function notifyQueueJoined(userId, serviceName) {
 
 /* Trigger 2 calls every time a user's queue position changes
    Sends "almost ready" once the position reaches ALMOST_READY_THRESHOLD,
-  but only once per user+service, so a user moving 2 to 1 isn't notified twice
-*/
- Returns { ok: true, notification: null } when there is nothing to announce.
+   but only once per user+service, so a user moving 2 to 1 isn't notified twice.
+   Returns {ok: true, notification: null} when there is nothing to announce
+ */
 function notifyPositionUpdate(userId, serviceName, position) {
   if (typeof position !== 'number' || !Number.isInteger(position) || position < 1) {
     return { ok: false, errors: ['position must be a whole number of at least 1'] };
