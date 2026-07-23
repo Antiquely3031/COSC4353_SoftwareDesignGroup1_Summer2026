@@ -1,19 +1,19 @@
 // Startup
-    // Buttons
-    const Action_Buttons = document.querySelectorAll('#action-buttons button');
+    document.addEventListener("ServicesRendered", () => {
+        // Buttons
+        const Action_Buttons = document.querySelectorAll('#action-buttons button');
+        Action_Buttons.forEach(button => {button.addEventListener("click", Service_Status_Change)});
 
-    Action_Buttons.forEach(button => {button.addEventListener("click", Service_Status_Change)});
-
-    document.addEventListener("DOMContentLoaded", () => {
-        // Target the list items already produced by Admin.js
+        // Service List
+        const Services = event.detail.services;
         const Button_List = document.querySelectorAll('.scroll-list-box ul li');
 
         Button_List.forEach((li, index) => {
             const Button = li.querySelector('button');
 
             // Require Information
-            const Queue_Length_Count = "NaN";
-            const Status = "NaN";
+            const Queue_Length_Count = Services[index].queue_length;
+            const Status = Services[index].operation_status;
 
             // Modifications
             Button.innerHTML += `<p>${Queue_Length_Count}</p><p>${Status}</p>`;

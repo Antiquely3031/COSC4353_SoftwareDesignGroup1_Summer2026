@@ -86,13 +86,13 @@
 #serving-info button 
 {
     /* Dimensiosns */
+    height: 12vh;
     width: 100%;
 
     /* Characterisitics */
     border-radius: 14px;
     margin-bottom: 1.2vh;
     font-size: 2rem;
-    padding: 5vw;
 }
 
 #SI-action-buttons button 

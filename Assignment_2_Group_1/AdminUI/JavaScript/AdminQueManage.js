@@ -1,5 +1,5 @@
 //  Startup
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("ServicesRendered", () => {
     // Target the list items already produced by Admin.js
     const Button_List = document.querySelectorAll('.scroll-list-box ul li');
 

@@ -58,26 +58,51 @@ function Hamburger_Menu()
     });
 }
 
-function Service_Selection_Box() 
-{
-    const Service_List = document.querySelector('.scroll-list-box ul');
-
-    for (let index = 1; index <= 30; index++) 
+async function Get_Service_List() {
+    try 
     {
-        // Variables
-        const Index_li = document.createElement('li');
-        const Name = `Placeholder ${index}`;
+        const response = await fetch('http://localhost:3000/api/admin/services');
+        
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-        // Shorthands
-        const Button_Class = `button-feedback`;
-        const Button_Id = `Button-Service-${Name}`;
-        const Button_Parts = [
-            `<button type="button" class="${Button_Class}" id="${Button_Id}">`, 
-            `</button>`
-        ];
-
-        // Assembly
-        Index_li.innerHTML = `${Button_Parts[0]}<p>${Name}</p>${Button_Parts[1]}`;
-        Service_List.appendChild(Index_li);
+        const services = await response.json();
+        return services;
+    } catch (error) 
+    {
+        console.error('Failed to fetch admin service list:', error);
+        return []; // Fallback to an empty list on network error
     }
+}
+
+async function Service_Selection_Box() {
+    const Service_List = document.querySelector('.scroll-list-box ul');
+    if (!Service_List) { return; }
+
+    const services = await Get_Service_List();
+    Service_List.innerHTML = '';
+
+    if (services.length === 0) {
+        Service_List.innerHTML = '<li><p style="color: var(--text)">No services available or backend unreachable.</p></li>';
+        return;
+    }
+
+    // Populate DOM dynamically using server response
+    services.forEach((service, index) => {
+        const Index_li = document.createElement('li');
+        
+        // Clean ID string formulation
+        const cleanName = service.name.replace(/\s+/g, ' ');
+        const Button_Class = 'button-feedback';
+        const Button_Id = `Button-Service-${cleanName}`;
+
+        Index_li.innerHTML = `
+            <button type="button" class="${Button_Class}" id="${Button_Id}">
+                <p>${service.name}</p>
+            </button>
+        `;
+
+        Service_List.appendChild(Index_li);
+    });
+
+    document.dispatchEvent(new CustomEvent("ServicesRendered", {detail: { services: services }}));
 }
