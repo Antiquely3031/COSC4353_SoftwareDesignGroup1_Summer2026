@@ -144,6 +144,7 @@ async function handleAdminLogin(e){
       }
 
       showToast(`Welcome, adminstrator ${data.name}`);
+      window.location.href = '../A2_HTML/AdminDash.html';
     } catch(err) {
     showToast('Could not reach the server');
     }
