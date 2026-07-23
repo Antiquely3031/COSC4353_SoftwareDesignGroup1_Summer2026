@@ -1,8 +1,8 @@
 // Unit tests for the Notification backend
 // Run with npm test jest --coverage
 
-const notif = require('./NotificationBackend');
-const db = require('./notificationDB');
+const notif = require('./QSNotificationBackend');
+const db = require('./QSnotificationDB');
 
 // Every test starts from a clean empty store
 beforeEach(() => {
