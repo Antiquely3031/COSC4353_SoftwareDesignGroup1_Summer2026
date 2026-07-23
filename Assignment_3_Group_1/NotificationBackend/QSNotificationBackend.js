@@ -9,7 +9,7 @@
         notifyServed() / notifyQueueLeft() --> extra for completeness
 */
 
-const db = require('./notificationDB');
+const db = require('./QSnotificationDB');
 
 // Constants 
 
