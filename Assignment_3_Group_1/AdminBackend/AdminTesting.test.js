@@ -1,6 +1,6 @@
 const request = require('supertest');
 const ioClient = require('socket.io-client');
-const { startServer, Service_Entry, Container_Initializer } = require('./AdminBackend');
+const { startServer, Service_Entry, Container_Initializer } = require('./QSAdminBackend');
 
 test('Checking the basic mock data initialization', () => {
   const Test_Container = Container_Initializer();
