@@ -6,7 +6,7 @@ document.addEventListener("ServicesRendered", () => {
 
     Button_List.forEach((li, index) => {
         const Button = li.querySelector('button');
-        Button.onclick = function() {Service_Selected(Button, Services[index], index);};
+        Button.onclick = function() {Service_Selected(Button, Services[index]);};
     });
 
     // Form quieter
@@ -15,7 +15,7 @@ document.addEventListener("ServicesRendered", () => {
 });
 
 // Functions
-function Service_Selected(Service_Button, service, index) 
+function Service_Selected(Service_Button, service) 
 {
     const Text_Field = document.getElementById('name-field');
     const Service_Name = Service_Button.textContent.trim();
