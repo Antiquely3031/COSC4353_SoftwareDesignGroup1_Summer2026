@@ -1,5 +1,3 @@
 {
-    "jest.rootPath": "Assignment_3_Group_1/AdminBackend",
-    "jest.runMode": "on-save",
-    "jest.runMode": "watch"
+    "jest.rootPath": "Assignment_3_Group_1/AdminBackend"
 }
