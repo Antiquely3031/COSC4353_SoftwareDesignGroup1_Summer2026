@@ -5,7 +5,9 @@ const { startServer, Service_Entry, Container_Initializer } = require('./AdminBa
 test('Checking the basic mock data initialization', () => {
   const Test_Container = Container_Initializer();
   expect(Test_Container).toBeDefined();
-  Test_Container.forEach(entry => {expect(entry).toBeInstanceOf(Service_Entry);});
+  
+  try { Test_Container.forEach(entry => {expect(entry).toBeInstanceOf(Service_Entry);});  }
+  catch(error) {  throw new Error(`Element ${error} failed in the Test_Container.`);  }
 });
 
 describe('Network Capabilities', () => {

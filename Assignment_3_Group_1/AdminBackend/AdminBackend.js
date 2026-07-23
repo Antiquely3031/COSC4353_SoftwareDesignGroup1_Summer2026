@@ -20,6 +20,8 @@ const io = new Server(server, {
 });
 
 class Service_Entry {
+  Queue_Array = [];
+
   constructor(name, description, expected_duration, priority, queue_length, operation_status) 
   {
     this.name = name;
@@ -28,6 +30,12 @@ class Service_Entry {
     this.queue_length = queue_length;
     this.operation_status = operation_status;
     this.expected_duration = expected_duration;
+
+    for(let index = 1; index <= 60; index++) 
+    {
+      const Client_Name = `Person ${index}`;
+      this.Queue_Array.push(Client_Name);
+    }
   }
 }
 
@@ -36,7 +44,7 @@ function Container_Initializer() {
   let Desc = "According to all known laws of aviation, there is no way that a bee should be able to fly.";
 
   for (let index = 1; index <= 30; index++) {
-    const Entry = new Service_Entry(`Placeholder ${index}`, Desc, 0, 'Low', 42, "clopen");
+    const Entry = new Service_Entry(`Placeholder ${index}`, `${Desc} ${index}`, index, index % 4, 42, "clopen");
     Container.push(Entry);
   }
 
