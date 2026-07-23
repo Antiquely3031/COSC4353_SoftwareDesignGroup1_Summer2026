@@ -109,6 +109,7 @@ async function handleLogin(e){
       }
 
       showToast(`Welcome back, ${data.name}`);
+      window.location.href = '../A2_HTML/QSUserDashboard.html';
     } catch(err) {
     showToast('Could not reach the server');
     }
