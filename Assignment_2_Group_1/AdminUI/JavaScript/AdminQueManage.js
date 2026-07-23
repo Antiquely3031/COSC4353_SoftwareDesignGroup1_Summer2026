@@ -1,17 +1,23 @@
-//  Startup
-document.addEventListener("ServicesRendered", () => {
+// Startup
+document.addEventListener("ServicesRendered", (event) => {
     // Target the list items already produced by Admin.js
     const Button_List = document.querySelectorAll('.scroll-list-box ul li');
+    const Services = event.detail.services;
 
     Button_List.forEach((li, index) => {
         const Button = li.querySelector('button');
-        Button.onclick = function() {Queue_List_Loaded(Button);};
+        Button.onclick = function() { Queue_List_Loaded(Button, Services[index]); };
     });
 
-    Queue_List_Loaded(null);
+    // Guard initial call: load first service if available, otherwise skip population
+    if (Services && Services.length > 0) 
+    {
+        const First_Button = Button_List[0]?.querySelector('button');
+        Queue_List_Loaded(First_Button, Services[0]);
+    }
 
     // Buttons
-    const Serve_Button_Serve= document.getElementById('SIAB-serve');
+    const Serve_Button_Serve = document.getElementById('SIAB-serve');
     const Serve_Button_Remove = document.getElementById('SIAB-remove');
     const Serve_Button_Deselect = document.getElementById('AB-Deselect');
     
@@ -64,14 +70,13 @@ function Update_Upcoming_Client()
     }
 }
 
-function Queue_List_Loaded(Service_Button) 
+function Queue_List_Loaded(Service_Button, service) 
 {
     // The title
     if (Service_Button) 
     {
         const Service_Name = Service_Button.textContent.trim();
         const Title_Box = document.querySelector('.SLB-Title p:nth-child(2)');
-
         Title_Box.textContent = Service_Name;
     }
 
@@ -79,10 +84,17 @@ function Queue_List_Loaded(Service_Button)
     const Service_List = document.querySelector('.queue-list-box ul');
     Service_List.innerHTML = "";
 
-    for (let index = 1; index <= 30; index++) 
+    // Guard check in case no service object is passed
+    if (!(service && service.Queue_Array)) 
+    {
+        Update_Upcoming_Client();
+        return;
+    }
+
+    service.Queue_Array.forEach((person, index) =>
     {
         const Index_li = document.createElement('li');
-        const Name = `Placeholder ${index}`;
+        const Name = person;
 
         // Add the sorting attributes directly during item template construction
         Index_li.setAttribute('draggable', 'true');
@@ -90,7 +102,7 @@ function Queue_List_Loaded(Service_Button)
         
         Index_li.innerHTML = `<p>${Name}</p>`;
         Service_List.appendChild(Index_li);
-    }
+    });
 
     // Initialize the Drag & Drop Event Handlers
     Enable_Queue_Sorting(Service_List);
