@@ -1,0 +1,11 @@
+{
+  "name": "queuesmart_notifications",
+  "version": "1.0.0",
+  "description": "Notification backend module for QueueSmart (Richard)",
+  "scripts": {
+    "test": "jest --coverage"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2"
+  }
+}
