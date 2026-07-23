@@ -6,7 +6,7 @@ document.addEventListener("ServicesRendered", () => {
 
     Button_List.forEach((li, index) => {
         const Button = li.querySelector('button');
-        Button.onclick = function() {Service_Selected(Button, Services, index);};
+        Button.onclick = function() {Service_Selected(Button, Services[index], index);};
     });
 
     // Form quieter
@@ -15,22 +15,22 @@ document.addEventListener("ServicesRendered", () => {
 });
 
 // Functions
-function Service_Selected(Service_Button, service_list, index) 
+function Service_Selected(Service_Button, service, index) 
 {
     const Text_Field = document.getElementById('name-field');
     const Service_Name = Service_Button.textContent.trim();
     Text_Field.value = Service_Name;
 
     const Description_Field = document.querySelector('textarea');
-    const Service_Desc = service_list[index].description;
+    const Service_Desc = service.description;
     Description_Field.value = Service_Desc;
 
     const Time_Field = document.getElementById('expection-time-field');
-    const Service_Time = service_list[index].expected_duration;
+    const Service_Time = service.expected_duration;
     Time_Field.value = Service_Time;
 
     const Priority_Radios = [...document.querySelectorAll('input[type="radio"]')];
-    const Service = service_list[index].priority;
+    const Service = service.priority;
     switch(Service) 
     {
         case 1: Priority_Radios[0].checked = true; break;
