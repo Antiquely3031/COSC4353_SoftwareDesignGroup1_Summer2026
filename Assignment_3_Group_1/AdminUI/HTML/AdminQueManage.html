@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]>      <html class="no-js"> <!--<![endif]-->
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="../CSS/Admin.css">
+        <link rel="stylesheet" href="../CSS/AdminQueManage.css">
+        <script src="../JavaScript/Admin.js" defer></script>
+        <script src="../JavaScript/AdminQueManage.js" defer></script>
+    </head>
+    <body>
+        <!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+        
+        <!-- <script src="" async defer></script> -->
+         <header>
+            <nav>
+                <button>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul>
+                    <li><p>Welcome, Admin!</p></li>
+                    <li><div></div></li>
+                    <li><a href="AdminDash.html">Dashboard</a></li>
+                    <li><a href="AdminSerManage.html">Service Management</a></li>
+                    <li><a href="AdminQueManage.html">Queue Management</a></li>
+                    <li><a href="../../HTML/QSLoginScreen.html">Log Out</a></li>
+                </ul>
+            </nav>
+
+            <img src="../../QueueSmartLogo.png" alt="QueueSmart logo">
+
+            <p>Queue Management</p>
+        </header>
+
+        <div class="decor-bar"></div>
+
+        <section class="container" id="service-list">
+            <span class="SLB-Title"><p>Services</p></span>
+            <div class="scroll-list-box"><ul></ul></div>
+        </section>
+
+        <section class="container" id="queue-list">
+            <span class="SLB-Title"><p>Queue:</p><p>Select Placeholder</p></span>
+            <div class="queue-list-box sortable-list">
+                <ul></ul>
+            </div>
+            
+            <span id="serving-info">
+                <span><p>Upcoming client:</p><p id="next-client-display">None</p></span>
+                <span id="SI-action-buttons">
+                    <button type="button" class="button-feedback" id="SIAB-serve">Serve</button>
+                    <button type="button" class="button-feedback" id="SIAB-remove">Remove</button>
+                </span>
+                <button type="button" class="button-feedback" id="AB-Deselect">Deselect</button>
+            </span>
+        </section>
+    </body>
+</html>

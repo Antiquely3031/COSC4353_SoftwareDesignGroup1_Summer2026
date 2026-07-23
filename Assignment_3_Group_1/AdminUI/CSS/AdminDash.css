@@ -1,0 +1,88 @@
+/* Scroll Box Section */
+.SLB-Title p {  width: 30%; }
+
+.SLB-Title p:nth-child(1) 
+{
+  text-align: left;
+  margin-right: 3.5%;
+}
+
+.SLB-Title p:nth-child(3) 
+{
+  text-align: right;
+  margin-left: 3.5%;
+}
+
+.scroll-list-box button p 
+{  
+  width: 30%;
+  text-align: center;
+}
+
+.scroll-list-box button p:nth-child(1) 
+{
+  text-align: left;
+  margin-right: 4.5%;
+}
+
+.scroll-list-box button p:nth-child(3) 
+{
+  text-align: right;
+  margin-left: 2.5%;
+}
+
+@media (max-width: 610px) {  .SLB-Title p:nth-child(2) {  width: 50%; }  }
+
+@media (max-width: 770px) 
+{
+  .SLB-Title p:nth-child(2) { width: 45%  }  
+}
+
+/* Status Selection Section */
+.SCB-Title
+{
+  /* Dimensions */
+  width: 80vw;
+
+  /* Characterisitcs */
+      color: var(--text);
+      align-items: left;
+
+      /* Text */
+      font-size: 2rem;
+}
+
+.status-change-box 
+{
+  /* Dimensions */
+  height: 50%; 
+  width: 80vw;
+
+  /* Characterisitcs */
+    /* Text */
+    color: var(--text);
+    font-size: 1.5rem;
+}
+
+.status-change-box span 
+{
+    /* Positioning */
+    display: flex;
+    justify-content: left;
+
+    /* Characterisitcs */
+    margin: 12px 0px;
+}
+
+.status-change-box span p { margin: 0px 6px 0px 0px;}
+
+#SCB-AB-Open { background-color: greenyellow; }
+
+#SCB-AB-Close { background-color: #DE3163; }
+
+#AB-Deselect 
+{
+  border-radius: 14px;
+  font-size: 2rem;
+  height:45%;
+}
