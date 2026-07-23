@@ -2,7 +2,7 @@
 // Run with npm test jest --coverage
 
 const notif = require('./QSNotificationBackend');
-const db = require('./QSnotificationDB');
+const db = require('./QSNotificationDB');
 
 // Every test starts from a clean empty store
 beforeEach(() => {
