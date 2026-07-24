@@ -1,115 +1,131 @@
 /* QSNotify: QueueSmart pop-up notifications through toast
-* When something changes in the user's queue, a notification pop-up appears in the 
-* corner of the screen. Clicking it takes the user to the Queue status page. 
-* Notifications are also kept on the notification page as a list ( can be removed if we feel we don't need it)
-* 
-*/
-
+ 
+ Assignment 3 UPDATE (Richard): the data now comes from the Notification BACKEND, not
+ localStorage. The UI fetches the notification list from the API and posts to it
+ when queue events happen
+ 
+ Requires the notification server running which you can do with npm start(in NotificationBackend/)
+ 
+ When something changes in the user's queue, a notification popup appears in the
+ corner of the screen. Clicking it takes the user to the Queue status page.
+ Notifications are also kept on the notification page as a list.
+ */
 
 (function (global) {
     'use strict';
 
-    var STORAGE_KEY = 'qs_notifications';
-    var TOAST_MS = 6000; // how long a pop-up stays before sliding away
+    // Config
+    var API_BASE = 'http://localhost:3001/api/notifications';
+
+    // Which user these notifications belong to. Login is expected to save the id
+    // after a successful sign-in sessionStorage.setItem('qs_userId', data.id)
+    // Until that is wired, we fall back to a demo user (should change in the next asssignment)
+    var USER_ID =
+        (global.sessionStorage && sessionStorage.getItem('qs_userId')) || '1';
+
+    var TOAST_MS = 6000; // how long a popup stays before sliding away
 
     // When the notification is clicked, it should take the user to queue status
-  
     var thisScript = document.currentScript;
     var QUEUE_STATUS_URL =
         (thisScript && thisScript.getAttribute('data-queue-status')) || 'queue-status.html';
 
     // Notification types with icons
     var TYPES = {
-        queue: {label: 'Queue Update',  icon: '↕'},
+        queue:  {label: 'Queue Update',  icon: '↕'},
         status: {label: 'Status Change', icon: '●'},
-        info: {label: 'Info',          icon: 'ℹ'}
+        info:   {label: 'Info',          icon: 'ℹ'}
     };
 
-    // Storage
-
-    function load() {
-        try {
-            var raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) { return JSON.parse(raw); }
-        } catch (e) { /* unavailable or bad JSON */ }
-        return null;
-    }
-
-    function save(list) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
-        catch (e) { /* ignore */ }
-    }
-
-    // Sample notifications, so its not empty
-    function seed() {
-        var now = Date.now();
-        var min = 60 * 1000;
-        return [
-            { id: now - 1, type: 'status', title: 'Almost ready',
-              message: 'You are next in line for Academic Advising.',
-              time: new Date(now - 3 * min).toISOString() },
-            { id: now - 2, type: 'queue', title: 'Position updated',
-              message: 'Your position for Academic Advising changed from 4 to 3.',
-              time: new Date(now - 15 * min).toISOString() }
-        ];
-    }
-
-    if (load() === null) { save(seed()); }
-
-    // Data
+    // Data layer
+    // `cache` holds the last list fetched from the server so rendering stays sync
+    var cache = [];
 
     function getAll() {
-        var list = load();
-        return Array.isArray(list) ? list : [];
+        return Array.isArray(cache) ? cache : [];
     }
 
-    // Adds a notification, stores it, refresh list, and send a toast noti
-    function add(notif) {
-        notif = notif || {};
-        var type = TYPES[notif.type] ? notif.type : 'info';
-        var item = {
-            id: Date.now() + Math.floor(Math.random() * 1000),
-            type: type,
-            title: notif.title || TYPES[type].label,
-            message: notif.message || '',
-            time: new Date().toISOString()
-        };
-        var list = getAll();
-        list.unshift(item);
-        save(list);
-        renderAll();
-        showToast(item);
-        return item;
+    // Pull this user's notifications from the API, refresh the cache, rerender
+    function refresh() {
+        return fetch(API_BASE + '/' + encodeURIComponent(USER_ID))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                cache = Array.isArray(data.notifications) ? data.notifications : [];
+                renderAll();
+                return cache;
+            })
+            .catch(function () {
+                // Server unreachable, so keep whatever we last had, don't crash the page
+                renderAll();
+                return cache;
+            });
     }
 
-    // The two notis needed for this project, also wrapped so team members can use
-    function queueUpdate(service, from, to) {
-        return add({
-            type: 'queue',
-            title: 'Position updated',
-            message: 'Your position for ' + service + ' changed from ' + from + ' to ' + to + '.'
+    // POST a queue event to the API. THe server returns the created
+    // notification or null when there is nothing to announce, we toast it then refresh
+    function post(path, body) {
+        return fetch(API_BASE + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+        .then(function (r) {
+            return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+        })
+        .then(function (res) {
+            if (res.ok && res.data && res.data.notification) {
+                showToast(res.data.notification);
+            }
+            return refresh().then(function () { return res.data; });
+        })
+        .catch(function () {
+            showToast({ type: 'info', title: 'Offline',
+                        message: 'Could not reach the notification server.' });
         });
     }
 
-    function statusChange(service, status) {
-        var messages = {
-            'waiting':      { title: 'Waiting',      msg: 'You are now waiting in the ' + service + ' queue.' },
-            'almost-ready': { title: 'Almost ready', msg: 'You are almost up for ' + service + '. Please stay nearby.' },
-            'served':       { title: 'Served',       msg: 'Your ' + service + ' request has been completed.' }
-        };
-        var m = messages[status] || { title: 'Status update', msg: 'Status changed for ' + service + '.' };
-        var item = add({ type: 'status', title: m.title, message: m.msg });
-
-        // Added to clear the notification list after being served
-        if (status === 'served') { clearAll(); }
-
-        return item;
+    // Trigger helpers
+    function queueJoined(service) {
+        return post('/queue-joined', { userId: USER_ID, serviceName: service });
+    }
+    function positionUpdate(service, position) {
+        return post('/position-update', { userId: USER_ID, serviceName: service, position: position });
+    }
+    function served(service) {
+        return post('/served', { userId: USER_ID, serviceName: service });
+    }
+    function left(service) {
+        return post('/queue-left', { userId: USER_ID, serviceName: service });
     }
 
-    function clearAll() { save([]); renderAll(); }
+    // Goes through the API's validating create endpoint
+    function add(notif) {
+        notif = notif || {};
+        return post('', { userId: USER_ID, type: notif.type, title: notif.title, message: notif.message });
+    }
 
-    // Helper functions
+    function clearAll() {
+        return fetch(API_BASE + '/' + encodeURIComponent(USER_ID), { method: 'DELETE' })
+            .then(function () { return refresh(); })
+            .catch(function () { /* ignore */ });
+    }
 
+    // Backwards compatible wrappers 
+    // The A2 pages/buttons call queueUpdate()/statusChange() and keeps them working by
+    // mapping them onto the backend triggers
+    function queueUpdate(service, from, to) {
+        // A2 passed (from, to) the backend cares about the new position
+        return positionUpdate(service, to);
+    }
+    function statusChange(service, status) {
+        if (status === 'served')       { return served(service); }
+        if (status === 'almost-ready') { return positionUpdate(service, 1); }
+        if (status === 'waiting')      { return queueJoined(service); }
+        // anything else just a plain status note through the validating create endpoint
+        return add({ type: 'status', title: 'Status update', message: 'Status changed for ' + service + '.' });
+    }
+
+    // Helpers
     function relativeTime(iso) {
         var diff = Date.now() - new Date(iso).getTime();
         var sec = Math.round(diff / 1000);
@@ -131,9 +147,7 @@
     function iconFor(type) { return (TYPES[type] || TYPES.info).icon; }
     function labelFor(type) { return (TYPES[type] || TYPES.info).label; }
 
-    // Toast
-
-    // Fixed container that holds the pop ups
+    // Toast 
     function toastWrap() {
         var wrap = document.querySelector('.qs-toast-wrap');
         if (!wrap) {
@@ -152,7 +166,7 @@
     }
 
     function showToast(item) {
-        if (!document.body) { return; } // nothing to attach to yet
+        if (!document.body) { return; }
         var wrap = toastWrap();
 
         var el = document.createElement('div');
@@ -167,28 +181,22 @@
             '</div>' +
             '<button class="qs-toast-close" aria-label="Dismiss">×</button>';
 
-        // Click the toast body go to Queue Status
         el.addEventListener('click', function () {
             global.location.assign(QUEUE_STATUS_URL);
         });
-        // Close button dismisses without navigating
         el.querySelector('.qs-toast-close').addEventListener('click', function (e) {
             e.stopPropagation();
             hideToast(el);
         });
 
         wrap.appendChild(el);
-
-        // force so the slide in transition runs
-        void el.offsetWidth;
+        void el.offsetWidth; // force the slide in transition
         el.classList.add('is-visible');
 
         setTimeout(function () { hideToast(el); }, TOAST_MS);
     }
 
     // List view
-
-    // Each notification is a clickable link to the Queue Status page
     function row(n) {
         return '' +
             '<li>' +
@@ -216,22 +224,28 @@
 
     function renderAll() {
         var dash = document.getElementById('qs-notify-dashboard');
-        if (dash) { renderInto(dash, 4); }   // dashboard: latest few
+        if (dash) { renderInto(dash, 4); }   // dashboard latest few
         var full = document.getElementById('qs-notify-full');
-        if (full) { renderInto(full, 0); }   // notifications page: all
+        if (full) { renderInto(full, 0); }   // notifications page all
     }
 
-    // init
-
-    function init() { renderAll(); }
+    // init 
+    function init() { refresh(); }   // pull from the backend on load
 
     global.QSNotify = {
+        // backend triggers
+        queueJoined: queueJoined,
+        positionUpdate: positionUpdate,
+        served: served,
+        left: left,
+        // A2 compatible API (kept so existing buttons/pages keep working)
         add: add,
         queueUpdate: queueUpdate,
         statusChange: statusChange,
         getAll: getAll,
         clearAll: clearAll,
-        render: renderAll
+        render: renderAll,
+        refresh: refresh
     };
 
     if (document.readyState === 'loading') {

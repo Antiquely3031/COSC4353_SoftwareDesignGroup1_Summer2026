@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1784851273276" clover="3.2.0">
+  <project timestamp="1784851273276" name="All files">
+    <metrics statements="22" coveredstatements="21" conditionals="16" coveredconditionals="15" methods="6" coveredmethods="6" elements="44" coveredelements="42" complexity="0" loc="22" ncloc="22" packages="1" files="1" classes="1"/>
+    <file name="queueService.js" path="C:\Users\Kchau\source\repos\COSC 4353\QueueSmart\QueueUser\queueService.js">
+      <metrics statements="22" coveredstatements="21" conditionals="16" coveredconditionals="15" methods="6" coveredmethods="6"/>
+      <line num="2" count="7" type="cond" truecount="3" falsecount="1"/>
+      <line num="3" count="0" type="stmt"/>
+      <line num="9" count="9" type="stmt"/>
+      <line num="11" count="7" type="cond" truecount="2" falsecount="0"/>
+      <line num="12" count="1" type="stmt"/>
+      <line num="18" count="6" type="stmt"/>
+      <line num="19" count="2" type="cond" truecount="2" falsecount="0"/>
+      <line num="22" count="6" type="cond" truecount="2" falsecount="0"/>
+      <line num="23" count="1" type="stmt"/>
+      <line num="29" count="5" type="stmt"/>
+      <line num="30" count="1" type="cond" truecount="2" falsecount="0"/>
+      <line num="33" count="5" type="stmt"/>
+      <line num="42" count="5" type="stmt"/>
+      <line num="44" count="5" type="stmt"/>
+      <line num="51" count="2" type="stmt"/>
+      <line num="52" count="1" type="cond" truecount="2" falsecount="0"/>
+      <line num="55" count="2" type="cond" truecount="2" falsecount="0"/>
+      <line num="56" count="1" type="stmt"/>
+      <line num="62" count="1" type="stmt"/>
+      <line num="64" count="1" type="stmt"/>
+      <line num="71" count="1" type="stmt"/>
+      <line num="77" count="1" type="stmt"/>
+    </file>
+  </project>
+</coverage>
