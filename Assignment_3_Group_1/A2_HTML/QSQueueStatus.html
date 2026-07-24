@@ -29,16 +29,16 @@
             <a href="QSLoginScreen.html">Logout</a>
         </nav>
 
-        <main class="dashboard-container">
+        <main class="dashboard-container" id="queueStatusPage">
 
             <section class="card">
                 <h2>Queue Status</h2>
-                <p><em>Now in queue</em></p>
+                <p id="statusMessage"><em>Now in queue</em></p>
             </section>
 
              <section class="card queue-status-card">
 
-            <h2>Welfare Check</h2>
+            <h2 id="statusService">Welfare Check</h2>
 
             <div class="status-information">
 
@@ -47,7 +47,7 @@
                         Current Position
                     </span>
 
-                    <span class="status-value">
+                    <span class="status-value" id="statusPosition">
                         12
                     </span>
                 </div>
@@ -58,7 +58,7 @@
                         Estimated Wait
                     </span>
 
-                    <span class="status-value">
+                    <span class="status-value" id="statusWaitTime">
                         46 minutes
                     </span>
                 </div>
@@ -69,14 +69,20 @@
                         Current Status
                     </span>
 
-                    <span class="status-badge">
+                    <span class="status-badge" id="statusCurrent">
                         Waiting
                     </span>
                 </div>
 
             </div>
+            <div class="queue-actions">
+                <button type="button" id="statusLeaveButton" class="leave-button">Leave Queue</button>
+            </div>
 
         </section>
         </main>
+
+        <script src="../A2_JS/QSNotifications.js"></script>
+        <script src="../A2_JS/QSUser.js"></script>
     </body>
 </html>
