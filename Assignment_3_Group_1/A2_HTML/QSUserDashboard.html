@@ -26,7 +26,7 @@
         <a href="QSQueueHistory.html">History</a>
         <a href="QSLoginScreen.html">Logout</a>
     </nav>
-    <main class="dashboard-container">
+    <main class="dashboard-container" id="dashboardPage"> 
 
         <section class="card">
             <h2>Welcome Back</h2>
@@ -36,10 +36,10 @@
         <!-- Current Queue Status Reminder that values seen are placeholder -->
         <section class="card">
             <h2>Waiting Status</h2>
-            <p><strong>Service:</strong> Welfare check</p>
-            <p><strong>Current Position:</strong> 12</p>
-            <p><strong>Estimated Wait Time (minutes):</strong> 46</p>
-            <p><strong>Status:</strong> <span class="status-badge">Waiting</span></p>
+            <p><strong>Service:</strong> <span id="dashboardService">--</span></p>
+            <p><strong>Current Position:</strong> <span id="dashboardPosition">--</span></p>
+            <p><strong>Estimated Wait Time (minutes):</strong> <span id="dashboardWaitTime">--</span></p>
+            <p><strong>Status:</strong> <span class="status-badge" id="dashboardStatus">--</span></p>
         </section>
 
         <!-- Selecting Available Services-->
@@ -50,27 +50,26 @@
                 <div class="service-card">
                     <h3>Advising things</h3>
                     <p>Estimated wait: 18 minutes</p>
-                    <a href="join-queue.html">Join Queue</a>
+                    <a href="QSJoinQueue.html">Join Queue</a>
                 </div>
             <div class="service-grid">
                 <div class="service-card">
                     <h3>Welfare check</h3>
                     <p>Estimated wait: 46 minutes</p>
-                    <a href="join-queue.html">Join Queue</a>
+                    <a href="QSJoinQueue.html">Join Queue</a>
                 </div>
             </div>
         </section>
         <!-- History/Notifications-->
         <section class="card">
             <h2>Notifications</h2>
-            <ul class="notification-list">
-                <li>Your queue position changed from 4 to 3.</li>
-                <li>You are currently waiting for Academic Advising.</li>
-                <li>You will be notified when your turn is approaching.</li>
-            </ul>
+            <!-- Rendered by QSNotify from the notification backend -->
+            <ul class="notification-list" id="qs-notify-dashboard"></ul>
         </section>
 
     </main>
+    <script src="../A2_JS/QSNotifications.js"></script>
+    <script src="../A2_JS/QSUser.js"></script>
 
 </body>
 </html>
