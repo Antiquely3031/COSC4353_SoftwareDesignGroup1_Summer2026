@@ -115,7 +115,7 @@ function setupJoinQueuePage()
 
         localStorage.setItem("currentQueue", JSON.stringify(queueData));
 
-        addNotification(`You joined the ${queueData.serviceName} queue.`);
+        QSNotify.queueJoined(queueData.serviceName);
         addHistoryRecord(queueData.serviceName, "Joined");
 
         joinQueueMessage.textContent =
@@ -139,7 +139,7 @@ function setupJoinQueuePage()
 
         // Then update related mock data
         decreaseQueueCount(serviceId);
-        addNotification(`You left the ${serviceName} queue.`);
+        QSNotify.left(serviceName);
         addHistoryRecord(serviceName, "Canceled");
 
         joinQueueMessage.textContent =
@@ -160,7 +160,7 @@ function setupDashboardPage()
     const queuePosition = document.getElementById("dashboardPosition");
     const waitTime = document.getElementById("dashboardWaitTime");
     const queueStatus = document.getElementById("dashboardStatus");
-    const notificationList = document.getElementById("dashboardNotifications");
+    //const notificationList = document.getElementById("dashboardNotifications");
 
     if (currentQueue) {
         if (serviceName)serviceName.textContent = currentQueue.serviceName;
@@ -169,10 +169,10 @@ function setupDashboardPage()
         if (queueStatus) queueStatus.textContent = currentQueue.status;
     }
 
-    if (notificationList) {
-        displayNotifications(notificationList);
-    }
-}
+//    if (notificationList) {
+//        displayNotifications(notificationList);
+//    }
+//}
 
 //queue status page
 function setupQueueStatusPage() {
@@ -194,6 +194,7 @@ function setupQueueStatusPage() {
 
     if (serviceName) serviceName.textContent = currentQueue.serviceName;
     if (queuePosition) queuePosition.textContent = currentQueue.position;
+    QSNotify.positionUpdate(currentQueue.serviceName, Number(currentQueue.position));
     if (waitTime) waitTime.textContent = `${currentQueue.estimatedWait} minutes`;
     if (queueStatus) queueStatus.textContent = currentQueue.status;
 
@@ -206,7 +207,7 @@ function setupQueueStatusPage() {
     leaveButton.addEventListener("click", () => {
         decreaseQueueCount(currentQueue.serviceId);
 
-        addNotification(`You left the ${currentQueue.serviceName} queue.`);
+        QSNotify.left(currentQueue.serviceName);
         addHistoryRecord(currentQueue.serviceName, "Canceled");
 
         localStorage.removeItem("currentQueue");
@@ -308,7 +309,7 @@ function getCurrentQueue() {
 
     return JSON.parse(queueData);
 }
-
+/*
 function addNotification(message) {
     const notifications = getNotifications();
 
@@ -346,7 +347,7 @@ function displayNotifications(notificationList) {
         notificationList.appendChild(li);
     });
 }
-
+*/
 function addHistoryRecord(serviceName, status) {
     const history = getHistory();
 
