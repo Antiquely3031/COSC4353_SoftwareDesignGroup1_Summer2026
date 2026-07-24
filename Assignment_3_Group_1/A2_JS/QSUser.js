@@ -172,7 +172,7 @@ function setupDashboardPage()
 //    if (notificationList) {
 //        displayNotifications(notificationList);
 //    }
-//}
+}
 
 //queue status page
 function setupQueueStatusPage() {
