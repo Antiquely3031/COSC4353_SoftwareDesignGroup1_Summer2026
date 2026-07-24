@@ -39,7 +39,13 @@ class Service_Entry {
   }
 }
 
-function Container_Initializer() {
+function sortServicesByPriority(services) 
+{
+  return services.sort((a, b) => b.priority - a.priority);
+}
+
+function Container_Initializer() 
+{
   const Container = [];
   let Desc = "According to all known laws of aviation, there is no way that a bee should be able to fly.";
 
@@ -48,13 +54,14 @@ function Container_Initializer() {
     Container.push(Entry);
   }
 
-  return Container;
+  return sortServicesByPriority(Container);
 }
 
 const Services_Container = Container_Initializer();
 
 // Helper Function: Validation for POST and PUT payloads
-function validateServicePayload(payload) {
+function validateServicePayload(payload) 
+{
   const { name, description, expected_duration, priority } = payload || {};
 
   // Required Fields Check
@@ -154,12 +161,12 @@ app.patch('/api/admin/services/status', (req, res) => {
 // POST: Create a new service
 app.post('/api/admin/services', (req, res) => {
     const validation = validateServicePayload(req.body);
-    if (!validation.valid) {  return res.status(400).json({ error: validation.error });  }
+    if (!validation.valid) { return res.status(400).json({ error: validation.error }); }
 
     const { name, description, expected_duration, priority } = validation.data;
 
     const existingService = Services_Container.find(s => s.name === name);
-    if (existingService) {  return res.status(409).json({ error: 'Service with this name already exists.' });  }
+    if (existingService) { return res.status(409).json({ error: 'Service with this name already exists.' }); }
 
     const newService = new Service_Entry(
         name,
@@ -170,7 +177,17 @@ app.post('/api/admin/services', (req, res) => {
         'clopen'
     );
 
-    Services_Container.push(newService);
+    // Find insertion index: Place at the end of the range for equal priority
+    // Find the index of the first service with a STRICTLY LOWER priority
+    let insertIndex = Services_Container.findIndex(s => s.priority < priority);
+    
+    if (insertIndex === -1) {
+      // If no service has lower priority, push to the end of the array
+      Services_Container.push(newService);
+    } else {
+      // Insert right before the first lower-priority element
+      Services_Container.splice(insertIndex, 0, newService);
+    }
 
     // Broadcast updated container over WebSockets
     io.emit('queue_updated', Services_Container);
@@ -300,7 +317,8 @@ io.on('connection', (socket) => {
 });
 
 // Function to start the server programmatically
-function startServer(port = 3000) {
+function startServer(port = 3000) 
+{
   return server.listen(port, () => {
       console.log(`AdminBackend (HTTP + WebSockets) listening on port ${port}`);
   });
@@ -308,7 +326,8 @@ function startServer(port = 3000) {
 
 // Automatically start if executed directly via Node (`node AdminBackend.js`)
 /* istanbul ignore next*/
-if (require.main === module) {
+if (require.main === module) 
+{
     startServer(3000);
 }
 

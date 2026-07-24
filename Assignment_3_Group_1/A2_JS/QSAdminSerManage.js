@@ -59,7 +59,10 @@ function Render_Service_List(Services)
 
     Scroll_Box_UL.innerHTML = ''; // Smooth in-place DOM clear
 
-    Services.forEach((service) => {
+    // Ensure list is sorted High to Low (3 -> 2 -> 1)
+    const sortedServices = [...Services].sort((a, b) => b.priority - a.priority);
+
+    sortedServices.forEach((service) => {
         const li = document.createElement('li');
         const button = document.createElement('button');
 

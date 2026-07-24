@@ -2,12 +2,22 @@ const request = require('supertest');
 const ioClient = require('socket.io-client');
 const { startServer, Service_Entry, Container_Initializer, Status_Changer } = require('./QSAdminBackend');
 
-test('Checking the basic mock data initialization', () => {
-  const Test_Container = Container_Initializer();
-  expect(Test_Container).toBeDefined();
-  
-  try { Test_Container.forEach(entry => {expect(entry).toBeInstanceOf(Service_Entry);});  }
-  catch(error) {  throw new Error(`Element ${error} failed in the Test_Container.`);  }
+describe('Mock Initialization', () => {
+  test('Checking the basic mock data initialization', () => {
+    const Test_Container = Container_Initializer();
+    expect(Test_Container).toBeDefined();
+    
+    try { Test_Container.forEach(entry => {expect(entry).toBeInstanceOf(Service_Entry);});  }
+    catch(error) {  throw new Error(`Element ${error} failed in the Test_Container.`);  }
+  });
+
+  test('Container_Initializer sorts mock services by priority (High to Low)', () => {
+    const container = Container_Initializer();
+    
+    for (let i = 0; i < container.length - 1; i++) {
+      expect(container[i].priority).toBeGreaterThanOrEqual(container[i + 1].priority);
+    }
+  });
 });
 
 test('updates status for existing service', () => {
@@ -219,6 +229,56 @@ describe('Network Capabilities', () => {
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Priority Level is required.');
     });
+
+    test('inserts new high-priority service (priority 3) at the bottom of priority 3 group', async () => {
+    const newService = {
+      name: 'High Priority Test Service',
+      description: 'Testing relative insertion for priority 3',
+      expected_duration: 15,
+      priority: 3
+    };
+
+    const response = await request(testServer)
+      .post('/api/admin/services')
+      .send(newService);
+
+    expect(response.status).toBe(201);
+
+    // Fetch updated services container
+    const getRes = await request(testServer).get('/api/admin/services');
+    const services = getRes.body;
+
+    // Find index of the newly inserted service
+    const insertedIndex = services.findIndex(s => s.name === 'High Priority Test Service');
+    
+    // Verify it is placed after existing Priority 3 services and before Priority 2 services
+    expect(insertedIndex).toBeGreaterThan(-1);
+    if (insertedIndex < services.length - 1) {
+      expect(services[insertedIndex + 1].priority).toBeLessThanOrEqual(3);
+    }
+  });
+
+  test('inserts new low-priority service (priority 1) at the end of the container', async () => {
+    const newService = {
+      name: 'Low Priority Test Service',
+      description: 'Testing relative insertion for priority 1',
+      expected_duration: 15,
+      priority: 1
+    };
+
+    const response = await request(testServer)
+      .post('/api/admin/services')
+      .send(newService);
+
+    expect(response.status).toBe(201);
+
+    const getRes = await request(testServer).get('/api/admin/services');
+    const services = getRes.body;
+
+    // Verify it is inserted at the very end (or within priority 1 block)
+    const lastService = services[services.length - 1];
+    expect(lastService.priority).toBe(1);
+  });
   });
 
   describe('HTTP PUT /api/admin/services', () => {
