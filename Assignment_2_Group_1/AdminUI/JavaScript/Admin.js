@@ -81,7 +81,8 @@ async function Service_Selection_Box() {
     const services = await Get_Service_List();
     Service_List.innerHTML = '';
 
-    if (services.length === 0) {
+    if (services.length === 0) 
+    {
         Service_List.innerHTML = '<li><p style="color: var(--text)">No services available or backend unreachable.</p></li>';
         return;
     }

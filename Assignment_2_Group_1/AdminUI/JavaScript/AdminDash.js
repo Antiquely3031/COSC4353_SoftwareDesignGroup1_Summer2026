@@ -39,6 +39,32 @@ function Service_Selected(Service_Button)
     SCB_Status.textContent = Service_Details[2];
 }
 
+async function Operation_Status_Sender(service_name, status) 
+{
+    try 
+    {
+        const response = await fetch('http://localhost:3000/api/admin/services/status', 
+        {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: service_name,
+                status: status
+            })
+        });
+
+        if (!response.ok) 
+        {
+            console.error('Failed to update status on server:', response.statusText);
+        }
+    } catch (error) 
+    {
+        console.error('Network error updating operation status:', error);
+    }
+}
+
 function Service_Status_Change(Action_Button) 
 {
     // Startup Variabels
@@ -59,6 +85,9 @@ function Service_Status_Change(Action_Button)
         SCB_Status.textContent = "NaN";
         return;
     }
+
+    // Send to the Backend
+    Operation_Status_Sender(Service_Name, Service_Status);
     
     // Modifications
     const Listed_Service = document.getElementById(`Button-Service-${Service_Name}`);
