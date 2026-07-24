@@ -68,10 +68,7 @@ function Status_Changer(service_name, new_status)
 app.patch('/api/admin/services/status', (req, res) => {
     const { name, status } = req.body;
 
-    if (!(name && status)) 
-    {
-      return res.status(400).json({ error: 'Missing name or status in request body.' });
-    }
+    if (!(name && status)) {  return res.status(400).json({ error: 'Missing name or status in request body.' });  }
 
     const updatedService = Status_Changer(name, status);
 
@@ -93,15 +90,10 @@ app.patch('/api/admin/services/status', (req, res) => {
 // POST: Create a new service
 app.post('/api/admin/services', (req, res) => {
     const { name, description, expected_duration, priority } = req.body;
-
-    if (!name || !description) {
-        return res.status(400).json({ error: 'Name and description are required.' });
-    }
+    if (!(name && description)) {  return res.status(400).json({ error: 'Name and description are required.' });  }
 
     const existingService = Services_Container.find(s => s.name === name);
-    if (existingService) {
-        return res.status(409).json({ error: 'Service with this name already exists.' });
-    }
+    if (existingService) {  return res.status(409).json({ error: 'Service with this name already exists.' });  }
 
     const newService = new Service_Entry(
         name,
@@ -144,9 +136,7 @@ app.delete('/api/admin/services/:name', (req, res) => {
     const initialLength = Services_Container.length;
 
     const index = Services_Container.findIndex(s => s.name === serviceName);
-    if (index === -1) {
-        return res.status(404).json({ error: 'Service not found.' });
-    }
+    if (index === -1) {  return res.status(404).json({ error: 'Service not found.' });  }
 
     Services_Container.splice(index, 1);
 
@@ -167,10 +157,79 @@ io.on('connection', (socket) => {
   // Send initial queue state to newly connected client
   socket.emit('queue_updated', Services_Container);
 
-  // Example event: Queue Management updates client status
+  // SERVER-SIDE DISCONNECT HANDLER
+  socket.on('disconnect', (reason) => {
+    console.log(`Client disconnected from Queue WS (${socket.id}). Reason: ${reason}`);
+  });
+
+  // ADMIN ACTION: Serve next client (removes first person from array)
   socket.on('serve_client', (data) => {
-      // Logic to remove/serve client from queue...
-      io.emit('queue_updated', Services_Container); // Broadcast updated list to all admins
+    const { service_name } = data || {};
+    const service = Services_Container.find(s => s.name === service_name);
+
+    if (service && service.Queue_Array.length > 0) 
+    {
+      service.Queue_Array.shift();
+      service.queue_length = service.Queue_Array.length;
+      io.emit('queue_updated', Services_Container);
+    }
+  });
+
+  // ADMIN ACTION: Remove specific client or first client
+  socket.on('remove_client', (data) => {
+    const { service_name, client_index } = data || {};
+    const service = Services_Container.find(s => s.name === service_name);
+
+    if (service && service.Queue_Array.length > 0) 
+    {
+      const indexToRemove = typeof client_index === 'number' ? client_index : 0;
+      service.Queue_Array.splice(indexToRemove, 1);
+      service.queue_length = service.Queue_Array.length;
+      io.emit('queue_updated', Services_Container);
+    }
+  });
+
+  // ADMIN ACTION: Drag & Drop Reorder
+  socket.on('reorder_queue', (data) => {
+    const { service_name, updated_queue } = data || {};
+    const service = Services_Container.find(s => s.name === service_name);
+
+    if (service && Array.isArray(updated_queue)) 
+    {
+      service.Queue_Array = updated_queue;
+      service.queue_length = service.Queue_Array.length;
+      io.emit('queue_updated', Services_Container);
+    }
+  });
+
+  // USER ACTION: Join Queue voluntarily
+  socket.on('join_queue', (data) => {
+    const { service_name, client_name } = data || {};
+    const service = Services_Container.find(s => s.name === service_name);
+
+    if (service && client_name) 
+    {
+      service.Queue_Array.push(client_name);
+      service.queue_length = service.Queue_Array.length;
+      io.emit('queue_updated', Services_Container);
+    }
+  });
+
+  // USER ACTION: Leave Queue voluntarily
+  socket.on('leave_queue', (data) => {
+    const { service_name, client_name } = data || {};
+    const service = Services_Container.find(s => s.name === service_name);
+    if (service && client_name) 
+    {
+      const index = service.Queue_Array.indexOf(client_name);
+      
+      if (index !== -1) 
+      {
+        service.Queue_Array.splice(index, 1);
+        service.queue_length = service.Queue_Array.length;
+        io.emit('queue_updated', Services_Container);
+      }
+    }
   });
 });
 

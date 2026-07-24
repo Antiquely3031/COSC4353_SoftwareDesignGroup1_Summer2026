@@ -193,18 +193,121 @@ describe('Network Capabilities', () => {
     });
   });
 
-  test('WebSocket receives queue_updated and handles serve_client', (done) => {
-    const clientSocket = ioClient(`http://localhost:${testPort}`);
+  describe('WebSocket Handlers & Disconnect Events', () => {
+    let clientSocket;
 
-    clientSocket.on('queue_updated', (data) => {
-      expect(Array.isArray(data)).toBe(true);
+    beforeEach((done) => {
+      clientSocket = ioClient(`http://localhost:${testPort}`, {
+        transports: ['websocket'],
+        forceNew: true
+      });
+      clientSocket.on('connect', done);
+    });
 
-      clientSocket.emit('serve_client', { id: 1 });
-      
-      setTimeout(() => {
+    afterEach(() => {
+      if (clientSocket.connected) {
         clientSocket.disconnect();
+      }
+    });
+
+    test('receives queue_updated on initial connection', (done) => {
+      // Connect fresh socket inside test to register listener before server emits initial queue_updated
+      const testSocket = ioClient(`http://localhost:${testPort}`, {
+        transports: ['websocket'],
+        forceNew: true
+      });
+
+      testSocket.on('queue_updated', (data) => {
+        expect(Array.isArray(data)).toBe(true);
+        testSocket.disconnect();
+        done();
+      });
+    });
+
+    test('handles serve_client and broadcasts updated queue', (done) => {
+      clientSocket.emit('serve_client', { service_name: 'Placeholder 1' });
+
+      clientSocket.on('queue_updated', (services) => {
+        const updatedService = services.find(s => s.name === 'Placeholder 1');
+        expect(updatedService.Queue_Array.length).toBe(59); // Shifted Person 1
+        expect(updatedService.Queue_Array[0]).toBe('Person 2');
+        done();
+      });
+    });
+
+    test('handles remove_client with specific index and defaults to index 0', (done) => {
+      clientSocket.emit('remove_client', { service_name: 'Placeholder 5', client_index: 2 });
+
+      clientSocket.once('queue_updated', (services) => {
+        const updatedService = services.find(s => s.name === 'Placeholder 5');
+        expect(updatedService.Queue_Array).not.toContain('Person 3');
+
+        // Test fallback to default index 0 when client_index is missing
+        clientSocket.emit('remove_client', { service_name: 'Placeholder 5' });
+        clientSocket.once('queue_updated', (servicesAfterDefault) => {
+          const defaultRemovedService = servicesAfterDefault.find(s => s.name === 'Placeholder 5');
+          expect(defaultRemovedService.Queue_Array[0]).toBe('Person 2');
+          done();
+        });
+      });
+    });
+
+    test('handles reorder_queue event', (done) => {
+      const customOrder = ['Person 10', 'Person 1', 'Person 5'];
+      clientSocket.emit('reorder_queue', { service_name: 'Placeholder 6', updated_queue: customOrder });
+
+      clientSocket.on('queue_updated', (services) => {
+        const updatedService = services.find(s => s.name === 'Placeholder 6');
+        expect(updatedService.Queue_Array).toEqual(customOrder);
+        expect(updatedService.queue_length).toBe(3);
+        done();
+      });
+    });
+
+    test('handles join_queue and leave_queue events', (done) => {
+      const clientName = 'Unit Test Client';
+      clientSocket.emit('join_queue', { service_name: 'Placeholder 7', client_name: clientName });
+
+      clientSocket.once('queue_updated', (services) => {
+        const joinedService = services.find(s => s.name === 'Placeholder 7');
+        expect(joinedService.Queue_Array).toContain(clientName);
+
+        // Leave queue test
+        clientSocket.emit('leave_queue', { service_name: 'Placeholder 7', client_name: clientName });
+        clientSocket.once('queue_updated', (servicesAfterLeave) => {
+          const leftService = servicesAfterLeave.find(s => s.name === 'Placeholder 7');
+          expect(leftService.Queue_Array).not.toContain(clientName);
+          done();
+        });
+      });
+    });
+
+    test('gracefully ignores actions on non-existent service or empty/falsy data payload', (done) => {
+      // Pass null/undefined to trigger `data || {}` fallback branches on all handlers
+      clientSocket.emit('serve_client', null);
+      clientSocket.emit('remove_client', undefined);
+      clientSocket.emit('reorder_queue', null);
+      clientSocket.emit('join_queue', undefined);
+      clientSocket.emit('leave_queue', null);
+
+      // Pass non-existent service name
+      clientSocket.emit('serve_client', { service_name: 'Non Existent' });
+      clientSocket.emit('leave_queue', { service_name: 'Placeholder 8', client_name: 'Ghost' });
+
+      // Verify server remains responsive after invalid/falsy payloads
+      setTimeout(() => {
+        expect(clientSocket.connected).toBe(true);
         done();
       }, 50);
+    });
+
+    test('triggers server-side disconnect handler cleanly upon explicit socket.disconnect()', (done) => {
+      clientSocket.on('disconnect', (reason) => {
+        expect(reason).toBe('io client disconnect');
+        done();
+      });
+
+      clientSocket.disconnect();
     });
   });
 

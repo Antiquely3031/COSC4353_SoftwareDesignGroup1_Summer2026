@@ -1,61 +1,106 @@
-// Startup
-document.addEventListener("ServicesRendered", (event) => {
-    // Target the list items already produced by Admin.js
-    const Button_List = document.querySelectorAll('.scroll-list-box ul li');
-    const Services = event.detail.services;
+let socket = null;
+let currentSelectedServiceName = null;
+let globalServicesContainer = [];
 
-    Button_List.forEach((li, index) => {
-        const Button = li.querySelector('button');
-        Button.onclick = function() { Queue_List_Loaded(Button, Services[index]); };
+// Initialize Socket connection
+if (typeof io !== 'undefined') {
+    socket = io('http://localhost:3000');
+
+    socket.on('connect', () => {
+        console.log("Connected to Backend WS with ID:", socket.id);
     });
 
-    // Guard initial call: load first service if available, otherwise skip population
-    if (Services && Services.length > 0) 
-    {
-        const First_Button = Button_List[0]?.querySelector('button');
-        Queue_List_Loaded(First_Button, Services[0]);
-    }
+    // Explicit cleanup: Disconnect socket when refreshing or navigating away
+    window.addEventListener('beforeunload', () => {
+        if (socket) 
+        {
+            console.log("Closing Socket.io connection...");
+            socket.disconnect();
+        }
+    });
 
-    // Buttons
+    // Real-time listener for queue updates from backend
+    socket.on('queue_updated', (services) => {
+        globalServicesContainer = services;
+
+        // Re-render currently selected queue if one is open
+        if (currentSelectedServiceName) 
+        {
+            const activeService = globalServicesContainer.find(s => s.name === currentSelectedServiceName);
+
+            if (activeService) {    renderQueueList(activeService);    } 
+            else {    Deselect_Queue();    }
+        }
+    });
+} else 
+{
+    console.error("Socket.io library (io) is not loaded! Include <script src='http://localhost:3000/socket.io/socket.io.js'></script> in your HTML.");
+}
+
+// Startup event binding
+document.addEventListener("ServicesRendered", (event) => {
+    if (event.detail && Array.isArray(event.detail.services)) {    globalServicesContainer = event.detail.services;    }
+
+    bindSidebarButtons();
+
+    // Load first service if available and none selected
+    if (!currentSelectedServiceName && globalServicesContainer.length > 0) {    selectServiceByName(globalServicesContainer[0].name);    }
+
+    // Bind action buttons
     const Serve_Button_Serve = document.getElementById('SIAB-serve');
     const Serve_Button_Remove = document.getElementById('SIAB-remove');
     const Serve_Button_Deselect = document.getElementById('AB-Deselect');
     
-    Serve_Button_Serve.addEventListener('click', Serve_Next_Client);
-    Serve_Button_Deselect.addEventListener('click', Deselect_Queue);
-    Serve_Button_Remove.addEventListener('click', Remove_Client);
+    if (Serve_Button_Serve) Serve_Button_Serve.onclick = Serve_Next_Client;
+    if (Serve_Button_Deselect) Serve_Button_Deselect.onclick = Deselect_Queue;
+    if (Serve_Button_Remove) Serve_Button_Remove.onclick = Remove_Client;
 });
 
-// Functions
-function Deselect_Queue() 
-{
-    const Title_Box = document.querySelector('.SLB-Title p:nth-child(2)');
-    Title_Box.textContent = "Select Service";
-
-    const Service_List = document.querySelector('.queue-list-box ul');
-    Service_List.innerHTML = "";
-    Update_Upcoming_Client();
+function bindSidebarButtons() {
+    const Button_List = document.querySelectorAll('.scroll-list-box ul li button');
+    Button_List.forEach((button) => {
+        button.onclick = () => {
+            const serviceName = button.textContent.trim();
+            selectServiceByName(serviceName);
+        };
+    });
 }
 
-function Removing_First_Client() 
+function selectServiceByName(serviceName) {
+    currentSelectedServiceName = serviceName;
+    const targetService = globalServicesContainer.find(s => s.name === serviceName);
+
+    const Title_Box = document.querySelector('.SLB-Title p:nth-child(2)');
+    if (Title_Box) Title_Box.textContent = serviceName;
+
+    if (targetService) {    renderQueueList(targetService);    }
+}
+
+function Deselect_Queue() 
 {
-    const First_Queue_Item = document.querySelector('.queue-list-box ul li');
-    
-    if (First_Queue_Item) 
-    {
-        First_Queue_Item.remove();
-        Update_Upcoming_Client();
-    }
+    currentSelectedServiceName = null;
+    const Title_Box = document.querySelector('.SLB-Title p:nth-child(2)');
+    if (Title_Box) Title_Box.textContent = "Select Service";
+
+    const Service_List = document.querySelector('.queue-list-box ul');
+    if (Service_List) Service_List.innerHTML = "";
+    Update_Upcoming_Client();
 }
 
 function Remove_Client() 
 {
-    Removing_First_Client();
+    if (!currentSelectedServiceName) return;
+
+    if (socket && socket.connected) {    socket.emit('remove_client', { service_name: currentSelectedServiceName, client_index: 0 });    } 
+    else {    console.warn("Socket not connected to server.");    }
 }
 
 function Serve_Next_Client() 
 {
-    Removing_First_Client();
+    if (!currentSelectedServiceName) return;
+
+    if (socket && socket.connected) {    socket.emit('serve_client', { service_name: currentSelectedServiceName });    } 
+    else {    console.warn("Socket not connected to server.");    }
 }
 
 function Update_Upcoming_Client() 
@@ -65,48 +110,35 @@ function Update_Upcoming_Client()
 
     if (Display_Target) 
     {
-        if (First_Client_Paragraph) {Display_Target.textContent = First_Client_Paragraph.textContent.trim();}
-        else {Display_Target.textContent = "None";}
+        if (First_Client_Paragraph) { Display_Target.textContent = First_Client_Paragraph.textContent.trim(); }
+        else { Display_Target.textContent = "None"; }
     }
 }
 
-function Queue_List_Loaded(Service_Button, service) 
+function renderQueueList(service) 
 {
-    // The title
-    if (Service_Button) 
-    {
-        const Service_Name = Service_Button.textContent.trim();
-        const Title_Box = document.querySelector('.SLB-Title p:nth-child(2)');
-        Title_Box.textContent = Service_Name;
-    }
-
-    // Queue List Box
     const Service_List = document.querySelector('.queue-list-box ul');
+    if (!Service_List) return;
+
     Service_List.innerHTML = "";
 
-    // Guard check in case no service object is passed
-    if (!(service && service.Queue_Array)) 
+    if (!(service && Array.isArray(service.Queue_Array))) 
     {
         Update_Upcoming_Client();
         return;
     }
 
-    service.Queue_Array.forEach((person, index) =>
+    service.Queue_Array.forEach((person) =>
     {
         const Index_li = document.createElement('li');
-        const Name = person;
-
-        // Add the sorting attributes directly during item template construction
         Index_li.setAttribute('draggable', 'true');
         Index_li.classList.add('sortable-item');
         
-        Index_li.innerHTML = `<p>${Name}</p>`;
+        Index_li.innerHTML = `<p>${person}</p>`;
         Service_List.appendChild(Index_li);
     });
 
-    // Initialize the Drag & Drop Event Handlers
     Enable_Queue_Sorting(Service_List);
-
     Update_Upcoming_Client();
 }
 
@@ -116,33 +148,41 @@ function Enable_Queue_Sorting(List_Element)
 
     List_Element.addEventListener('dragstart', (event) => {
         draggingItem = event.target.closest('.sortable-item');
-        if (draggingItem) {draggingItem.classList.add('dragging');}
+        if (draggingItem) { draggingItem.classList.add('dragging'); }
     });
 
     List_Element.addEventListener('dragend', (event) => {
         const targetItem = event.target.closest('.sortable-item');
-
-        if (targetItem) {targetItem.classList.remove('dragging');}
+        if (targetItem) { targetItem.classList.remove('dragging'); }
 
         document.querySelectorAll('.sortable-item').forEach(item => item.classList.remove('over'));
         draggingItem = null;
+
+        // Extract updated DOM order and emit to backend over WebSockets
+        if (currentSelectedServiceName && socket && socket.connected) 
+        {
+            const updatedQueueNames = [...List_Element.querySelectorAll('.sortable-item p')].map(p => p.textContent.trim());
+
+            socket.emit('reorder_queue', {
+                service_name: currentSelectedServiceName,
+                updated_queue: updatedQueueNames
+            });
+        }
     });
 
     List_Element.addEventListener('dragover', (event) => {
         event.preventDefault();
         
-        // Find out which item the cursor is hovering over
         const draggingOverItem = getDragAfterElement(List_Element, event.clientY);
-        
         document.querySelectorAll('.sortable-item').forEach(item => item.classList.remove('over'));
         
-        if (!draggingItem) {return;}
+        if (!draggingItem) { return; }
 
         if (draggingOverItem) 
         {
             draggingOverItem.classList.add('over');
             List_Element.insertBefore(draggingItem, draggingOverItem);
-        } else {List_Element.appendChild(draggingItem);}
+        } else { List_Element.appendChild(draggingItem); }
     });
 }
 
@@ -156,7 +196,7 @@ function getDragAfterElement(container, y)
         const box = child.getBoundingClientRect();
         const offset = y - box.top - box.height / 2;
         
-        if (!(offset < 0 && offset > closest.offset)) {return closest;}
+        if (!(offset < 0 && offset > closest.offset)) { return closest; }
 
         return { offset: offset, element: child };
     }, { offset: Number.NEGATIVE_INFINITY }).element;
