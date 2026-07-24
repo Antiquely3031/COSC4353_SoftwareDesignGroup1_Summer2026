@@ -90,13 +90,97 @@ describe('Network Capabilities', () => {
       expect(response.body.service.expected_duration).toBe(15);
     });
 
-    test('returns 400 when name or description is missing', async () => {
+    test('successfully creates a new service with low, medium, and high string priority levels', async () => {
+      let response = await request(testServer)
+        .post('/api/admin/services')
+        .send({ name: 'Service Low', description: 'Desc', expected_duration: 10, priority: 'low' });
+      expect(response.status).toBe(201);
+      expect(response.body.service.priority).toBe(1);
+
+      response = await request(testServer)
+        .post('/api/admin/services')
+        .send({ name: 'Service One', description: 'Desc', expected_duration: 10, priority: '1' });
+      expect(response.status).toBe(201);
+      expect(response.body.service.priority).toBe(1);
+
+      response = await request(testServer)
+        .post('/api/admin/services')
+        .send({ name: 'Service High', description: 'Desc', expected_duration: 10, priority: 'high' });
+      expect(response.status).toBe(201);
+      expect(response.body.service.priority).toBe(3);
+
+      response = await request(testServer)
+        .post('/api/admin/services')
+        .send({ name: 'Service Three', description: 'Desc', expected_duration: 10, priority: '3' });
+      expect(response.status).toBe(201);
+      expect(response.body.service.priority).toBe(3);
+    });
+
+    test('returns 400 when missing required fields', async () => {
+      let response = await request(testServer).post('/api/admin/services').send({});
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Service Name is required.');
+
+      response = await request(testServer).post('/api/admin/services').send({ name: 'Test' });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Description is required.');
+
+      response = await request(testServer).post('/api/admin/services').send({ name: 'Test', description: 'Desc' });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Expected Duration is required.');
+
+      response = await request(testServer).post('/api/admin/services').send({ name: 'Test', description: 'Desc', expected_duration: 10 });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Priority Level is required.');
+    });
+
+    test('returns 400 when name exceeds 100 characters', async () => {
+      const longName = 'A'.repeat(101);
       const response = await request(testServer)
         .post('/api/admin/services')
-        .send({ name: 'Incomplete Service' }); // missing description
+        .send({
+          name: longName,
+          description: 'Valid Desc',
+          expected_duration: 15,
+          priority: 'low'
+        });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Name and description are required.');
+      expect(response.body.error).toBe('Service Name cannot exceed 100 characters.');
+    });
+
+    test('returns 400 when expected_duration is invalid or non-positive', async () => {
+      const response = await request(testServer)
+        .post('/api/admin/services')
+        .send({
+          name: 'Invalid Duration Service',
+          description: 'Valid Desc',
+          expected_duration: -10,
+          priority: 'high'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Expected Duration must be a positive number.');
+    });
+
+    test('returns 400 for invalid priority levels (string, number, and object)', async () => {
+      let response = await request(testServer)
+        .post('/api/admin/services')
+        .send({ name: 'Test Prio', description: 'Desc', expected_duration: 10, priority: 'urgent' });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Priority Level must be low, medium, or high.');
+
+      response = await request(testServer)
+        .post('/api/admin/services')
+        .send({ name: 'Test Prio', description: 'Desc', expected_duration: 10, priority: 99 });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Priority Level must be 1 (low), 2 (medium), or 3 (high).');
+
+      response = await request(testServer)
+        .post('/api/admin/services')
+        .send({ name: 'Test Prio', description: 'Desc', expected_duration: 10, priority: { prio: 1 } });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid Priority Level format.');
     });
 
     test('returns 409 when service name already exists', async () => {
@@ -104,24 +188,36 @@ describe('Network Capabilities', () => {
         .post('/api/admin/services')
         .send({
           name: 'Placeholder 1',
-          description: 'Duplicate name check.'
+          description: 'Duplicate name check.',
+          expected_duration: 10,
+          priority: 'medium'
         });
 
       expect(response.status).toBe(409);
       expect(response.body.error).toBe('Service with this name already exists.');
     });
 
-    test('fallback check: assigns defaults when expected_duration and priority are missing or invalid', async () => {
-      const response = await request(testServer)
-        .post('/api/admin/services')
-        .send({
-          name: 'Fallback Test Service POST',
-          description: 'Testing default fallback branches.'
-        });
+    test('returns 400 when missing required fields or sending null payload', async () => {
+      // Tests null payload to cover payload || {} on line 58
+      let response = await request(testServer).post('/api/admin/services').send(null);
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Service Name is required.');
 
-      expect(response.status).toBe(201);
-      expect(response.body.service.expected_duration).toBe(0); // Triggers || 0 branch
-      expect(response.body.service.priority).toBe(1); // Triggers || 1 branch
+      response = await request(testServer).post('/api/admin/services').send({});
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Service Name is required.');
+
+      response = await request(testServer).post('/api/admin/services').send({ name: 'Test' });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Description is required.');
+
+      response = await request(testServer).post('/api/admin/services').send({ name: 'Test', description: 'Desc' });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Expected Duration is required.');
+
+      response = await request(testServer).post('/api/admin/services').send({ name: 'Test', description: 'Desc', expected_duration: 10 });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Priority Level is required.');
     });
   });
 
@@ -159,19 +255,18 @@ describe('Network Capabilities', () => {
       expect(response.body.error).toBe('Service not found.');
     });
 
-    test('fallback check: assigns defaults when expected_duration and priority evaluate to falsy', async () => {
+    test('returns 400 when validation fails on PUT request', async () => {
       const response = await request(testServer)
         .put('/api/admin/services')
         .send({
           name: 'Placeholder 3',
-          description: 'Testing PUT fallback branches.',
-          expected_duration: null,
-          priority: undefined
+          description: 'Testing validation failure on PUT',
+          expected_duration: 'invalid_duration',
+          priority: 'medium'
         });
 
-      expect(response.status).toBe(200);
-      expect(response.body.service.expected_duration).toBe(0); // Triggers || 0 branch
-      expect(response.body.service.priority).toBe(1); // Triggers || 1 branch
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Expected Duration must be a positive number.');
     });
   });
 
@@ -211,7 +306,6 @@ describe('Network Capabilities', () => {
     });
 
     test('receives queue_updated on initial connection', (done) => {
-      // Connect fresh socket inside test to register listener before server emits initial queue_updated
       const testSocket = ioClient(`http://localhost:${testPort}`, {
         transports: ['websocket'],
         forceNew: true
@@ -229,7 +323,7 @@ describe('Network Capabilities', () => {
 
       clientSocket.on('queue_updated', (services) => {
         const updatedService = services.find(s => s.name === 'Placeholder 1');
-        expect(updatedService.Queue_Array.length).toBe(59); // Shifted Person 1
+        expect(updatedService.Queue_Array.length).toBe(59);
         expect(updatedService.Queue_Array[0]).toBe('Person 2');
         done();
       });
@@ -242,7 +336,6 @@ describe('Network Capabilities', () => {
         const updatedService = services.find(s => s.name === 'Placeholder 5');
         expect(updatedService.Queue_Array).not.toContain('Person 3');
 
-        // Test fallback to default index 0 when client_index is missing
         clientSocket.emit('remove_client', { service_name: 'Placeholder 5' });
         clientSocket.once('queue_updated', (servicesAfterDefault) => {
           const defaultRemovedService = servicesAfterDefault.find(s => s.name === 'Placeholder 5');
@@ -272,7 +365,6 @@ describe('Network Capabilities', () => {
         const joinedService = services.find(s => s.name === 'Placeholder 7');
         expect(joinedService.Queue_Array).toContain(clientName);
 
-        // Leave queue test
         clientSocket.emit('leave_queue', { service_name: 'Placeholder 7', client_name: clientName });
         clientSocket.once('queue_updated', (servicesAfterLeave) => {
           const leftService = servicesAfterLeave.find(s => s.name === 'Placeholder 7');
@@ -283,18 +375,15 @@ describe('Network Capabilities', () => {
     });
 
     test('gracefully ignores actions on non-existent service or empty/falsy data payload', (done) => {
-      // Pass null/undefined to trigger `data || {}` fallback branches on all handlers
       clientSocket.emit('serve_client', null);
       clientSocket.emit('remove_client', undefined);
       clientSocket.emit('reorder_queue', null);
       clientSocket.emit('join_queue', undefined);
       clientSocket.emit('leave_queue', null);
 
-      // Pass non-existent service name
       clientSocket.emit('serve_client', { service_name: 'Non Existent' });
       clientSocket.emit('leave_queue', { service_name: 'Placeholder 8', client_name: 'Ghost' });
 
-      // Verify server remains responsive after invalid/falsy payloads
       setTimeout(() => {
         expect(clientSocket.connected).toBe(true);
         done();
@@ -312,22 +401,18 @@ describe('Network Capabilities', () => {
   });
 
   test('startServer default parameter branch check', () => {
-    // Invoking with undefined executes default assignment (port = 3000)
-    // We mock server.listen temporarily to avoid duplicate port errors
     const originalListen = testServer.listen;
     let defaultPortUsed;
     
-    // Spy on listen to verify default port 3000 without binding the network
     testServer.listen = (port) => {
       defaultPortUsed = port;
       return testServer;
     };
 
-    startServer(); // Triggers port = 3000 default parameter
+    startServer();
 
     expect(defaultPortUsed).toBe(3000);
 
-    // Restore original listen function
     testServer.listen = originalListen;
   });
 });

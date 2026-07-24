@@ -44,7 +44,7 @@ function Container_Initializer() {
   let Desc = "According to all known laws of aviation, there is no way that a bee should be able to fly.";
 
   for (let index = 1; index <= 30; index++) {
-    const Entry = new Service_Entry(`Placeholder ${index}`, `${Desc} ${index}`, index, index % 4, 42, "clopen");
+    const Entry = new Service_Entry(`Placeholder ${index}`, `${Desc} ${index}`, index, index % 4 || 1, 42, "clopen");
     Container.push(Entry);
   }
 
@@ -52,6 +52,70 @@ function Container_Initializer() {
 }
 
 const Services_Container = Container_Initializer();
+
+// Helper Function: Validation for POST and PUT payloads
+function validateServicePayload(payload) {
+  const { name, description, expected_duration, priority } = payload || {};
+
+  // Required Fields Check
+  if (name === undefined || name === null || String(name).trim() === '') {
+    return { valid: false, error: 'Service Name is required.' };
+  }
+  if (description === undefined || description === null || String(description).trim() === '') {
+    return { valid: false, error: 'Description is required.' };
+  }
+  if (expected_duration === undefined || expected_duration === null || String(expected_duration).trim() === '') {
+    return { valid: false, error: 'Expected Duration is required.' };
+  }
+  if (priority === undefined || priority === null || String(priority).trim() === '') {
+    return { valid: false, error: 'Priority Level is required.' };
+  }
+
+  // String Length Limit Check
+  const nameStr = String(name).trim();
+  if (nameStr.length > 100) {
+    return { valid: false, error: 'Service Name cannot exceed 100 characters.' };
+  }
+
+  // Expected Duration Field Type & Range Verification
+  const parsedDuration = Number(expected_duration);
+  if (isNaN(parsedDuration) || parsedDuration <= 0) {
+    return { valid: false, error: 'Expected Duration must be a positive number.' };
+  }
+
+  // Priority Level Field Verification (low / medium / high or numeric 1 / 2 / 3)
+  let parsedPriority;
+  switch (typeof priority) 
+  {
+    case 'string':
+      const lowerPrio = priority.toLowerCase().trim();
+
+      switch(lowerPrio) 
+      {
+        case 'low': case '1': parsedPriority = 1; break;
+        case 'medium': case '2': parsedPriority = 2; break;
+        case 'high': case '3': parsedPriority = 3; break;
+        default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
+      }
+      break;
+    case 'number':
+      if (!([1, 2, 3].includes(priority))) { return { valid: false, error: 'Priority Level must be 1 (low), 2 (medium), or 3 (high).' }; }
+
+      parsedPriority = priority;
+      break;
+    default: return { valid: false, error: 'Invalid Priority Level format.' };
+  }
+
+  return {
+    valid: true,
+    data: {
+      name: nameStr,
+      description: String(description).trim(),
+      expected_duration: parsedDuration,
+      priority: parsedPriority
+    }
+  };
+}
 
 // Functions for Dashboard
 function Status_Changer(service_name, new_status) 
@@ -89,8 +153,10 @@ app.patch('/api/admin/services/status', (req, res) => {
 // Functions and Functionality for Service Management
 // POST: Create a new service
 app.post('/api/admin/services', (req, res) => {
-    const { name, description, expected_duration, priority } = req.body;
-    if (!(name && description)) {  return res.status(400).json({ error: 'Name and description are required.' });  }
+    const validation = validateServicePayload(req.body);
+    if (!validation.valid) {  return res.status(400).json({ error: validation.error });  }
+
+    const { name, description, expected_duration, priority } = validation.data;
 
     const existingService = Services_Container.find(s => s.name === name);
     if (existingService) {  return res.status(409).json({ error: 'Service with this name already exists.' });  }
@@ -98,8 +164,8 @@ app.post('/api/admin/services', (req, res) => {
     const newService = new Service_Entry(
         name,
         description,
-        Number(expected_duration) || 0,
-        Number(priority) || 1,
+        expected_duration,
+        priority,
         0,
         'clopen'
     );
@@ -114,16 +180,17 @@ app.post('/api/admin/services', (req, res) => {
 
 // PUT: Update an existing service
 app.put('/api/admin/services', (req, res) => {
-    const { name, description, expected_duration, priority } = req.body;
+    const validation = validateServicePayload(req.body);
+    if (!validation.valid) {  return res.status(400).json({ error: validation.error });  }
+
+    const { name, description, expected_duration, priority } = validation.data;
 
     const targetService = Services_Container.find(s => s.name === name);
-    if (!targetService) {
-        return res.status(404).json({ error: 'Service not found.' });
-    }
+    if (!targetService) {  return res.status(404).json({ error: 'Service not found.' });  }
 
     targetService.description = description;
-    targetService.expected_duration = Number(expected_duration) || 0;
-    targetService.priority = Number(priority) || 1;
+    targetService.expected_duration = expected_duration;
+    targetService.priority = priority;
 
     io.emit('queue_updated', Services_Container);
 
@@ -133,7 +200,6 @@ app.put('/api/admin/services', (req, res) => {
 // DELETE: Remove a service by name
 app.delete('/api/admin/services/:name', (req, res) => {
     const serviceName = req.params.name;
-    const initialLength = Services_Container.length;
 
     const index = Services_Container.findIndex(s => s.name === serviceName);
     if (index === -1) {  return res.status(404).json({ error: 'Service not found.' });  }
