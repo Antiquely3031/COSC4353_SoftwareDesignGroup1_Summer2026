@@ -28,7 +28,7 @@
         <a href="QSQueueHistory.html">History</a>
         <a href="QSLoginScreen.html">Logout</a>
     </nav>
-    <main class="dashboard-container">
+    <main class="dashboard-container" id="joinQueuePage">
         <!-- Page introduction -->
         <section class="card">
             <h2>Join a Queue</h2>
@@ -42,7 +42,7 @@
                     <label for="service">
                         Available Service
                     </label>
-                    <select id="service" name="service" required>
+                    <select id="serviceSelect" name="service" required>
                         <option value="">Select a service</option>
                         <option value="advising">Advising Things</option>
                         <option value="welfare">Welfare Check</option>     
@@ -63,15 +63,18 @@
                 </div>
                 <div class="queue-actions">
                     <button type="submit" class="join-button">Join Queue</button>
-                    <button type="button" class="leave-button">Leave Queue</button>
+                    <button type="button" id="leaveQueueButton" class="leave-button">Leave Queue</button>
                 </div>
             </form>
         </section>
         <!-- Mock current status -->
         <section class="card">
             <h2>Queue Status</h2>
-            <p id="queueMessage">You are not currently waiting in a queue.</p>
+            <p id="joinQueueMessage">You are not currently waiting in a queue.</p>
         </section>
     </main>
+    <!-- The notification module must load before QSUser.js which calls QSNotify -->
+    <script src="../A2_JS/QSNotifications.js"></script>
+    <script src="../A2_JS/QSUser.js"></script>
 </body>
 </html>
