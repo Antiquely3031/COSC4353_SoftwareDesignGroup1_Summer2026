@@ -268,11 +268,13 @@ io.on('connection', (socket) => {
     const { service_name } = data || {};
     const service = Services_Container.find(s => s.name === service_name);
 
-    if (service && service.Queue_Array.length > 0) 
+    if (service && service.Queue_Array.length > 0)
     {
-      service.Queue_Array.shift();
+      const servedClient = service.Queue_Array.shift();
       service.queue_length = service.Queue_Array.length;
       io.emit('queue_updated', Services_Container);
+
+      notifyServed(servedClient, service.name);
     }
   });
 
