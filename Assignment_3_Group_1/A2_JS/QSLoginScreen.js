@@ -79,12 +79,25 @@ function handleLogin(e){
 
   if(!pass){ setError('loginPasswordErr','Password is required'); valid=false; }
   else setError('loginPasswordErr','');
-
+  // Comment by Richard
+  // Wired in the API, on a successful login, authenticates against the backend
+  // On success, it will save the returned user id to sessionStorage as 'qs_userId' so my notification
+  // module attaches notifications to the real user.
   if(valid){
-    // Real auth API goes here
-    showToast('Login validated — The API will be connected later');
-  }
-  return false;
+      fetch('http://localhost:3000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass })
+      })
+      .then(r => r.json().then(data => ({ ok: r.ok, data })))
+      .then(({ ok, data }) => {
+        if(!ok){ setError('loginPasswordErr', data.error || 'Invalid email or password'); return; }
+        sessionStorage.setItem('qs_userId', data.id);   // hand off so notifications attach to this user
+        window.location.assign('QSUserDashboard.html');
+      })
+      .catch(() => showToast('Could not reach the login server.'));
+    }
+    return false;
 }
 
 function handleSignup(e){
