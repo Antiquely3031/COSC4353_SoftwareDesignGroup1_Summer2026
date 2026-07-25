@@ -234,6 +234,24 @@ app.get('/api/admin/services', (req, res) => {
 });
 
 // WebSocket Connection Logic
+// (Richard) Tells the notification service (port 3001) that a client was served, so the
+// served user gets a "Served" notification. Forward compatible, so if a queue entry is a
+// plain string (current placeholder) it is used as the id adn if it becomes an object with
+// a userId later, that is used instead
+function notifyServed(servedClient, serviceName) {
+  if (typeof fetch !== 'function') { return; } // guard for Node < 18
+  const userId = (servedClient && typeof servedClient === 'object')
+    ? servedClient.userId
+    : servedClient;
+  if (userId === undefined || userId === null) { return; }
+
+  fetch('http://localhost:3001/api/notifications/served', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: String(userId), serviceName: serviceName })
+  }).catch(() => { /* notification service unreachable — ignore */ });
+}
+
 io.on('connection', (socket) => {
   console.log('Client connected to Queue WS:', socket.id);
 
