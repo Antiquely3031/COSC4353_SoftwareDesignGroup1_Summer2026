@@ -1,4 +1,4 @@
--- This is a sample file to be use as a baseline for our databases we test ourselves, try to keep our own database as close as to this pls
+-- Kevin created the structure and table creations. Patrick modified to match persistent database and login/authentication specs.
 CREATE DATABASE IF NOT EXISTS QueueSmartDB;
 USE QueueSmartDB;
 
