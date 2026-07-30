@@ -52,7 +52,7 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({error: "Invalid email or password."});
   }
 
-  const passwordMatches = await bcrypt.compare(password, user.password);
+  const passwordMatches = await bcrypt.compare(password, user.password_hash);
   if(!passwordMatches) {
     return res.status(401).json({error: 'Invalid email or password'});
   }
@@ -75,7 +75,7 @@ app.post('/api/admin-login', async (req, res) => {
     return res.status(401).json({error: 'Invalid email or password.'});
   }
 
-  const passwordMatches = await bcrypt.compare(password, user.password);
+  const passwordMatches = await bcrypt.compare(password, user.password_hash);
   if(!passwordMatches) {
     return res.status(401).json({error: 'Invalid email or password.'});
   }

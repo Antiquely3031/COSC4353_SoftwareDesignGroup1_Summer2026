@@ -30,5 +30,11 @@ module.exports = {
       'UPDATE user_credentials SET role = ? WHERE email = ?',
       [role, email]
     );
+  },
+  deleteUserByEmail: async (email) => {
+    await pool.execute('DELETE FROM user_credentials WHERE email = ?', [email]);
+  },
+  closePool: async () => {
+    await pool.end();
   }
 };

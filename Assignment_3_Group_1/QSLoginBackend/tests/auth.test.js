@@ -1,9 +1,14 @@
 const request = require('supertest');
 const app = require('../app');
-const db = require('../fakeDB');
+const db = require('../db');
 
-beforeEach(() => {
-  db._resetForTests();
+beforeEach(async () => {
+  await db.deleteUserByEmail('patrick@test.com');
+  await db.deleteUserByEmail('admin@test.com');
+});
+
+afterAll(async () => {
+  await db.closePool();
 });
 
 describe('POST /api/signup', () => {
@@ -14,7 +19,7 @@ describe('POST /api/signup', () => {
 
     expect(res.statusCode).toBe(201);
     expect(res.body.email).toBe('patrick@test.com');
-    expect(res.body.role).toBe('user');
+    expect(res.body.role).toBe('User');
     expect(res.body.password).toBeUndefined(); // hash should never be returned
   });
 
@@ -120,7 +125,7 @@ describe('POST /api/admin-login', () => {
       .send({ email: 'admin@test.com', password: 'adminpass123' });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.role).toBe('admin');
+    expect(res.body.role).toBe('Administrator');
   });
 
   test('blocks a valid, non-admin user with 403', async () => {
