@@ -1,19 +1,19 @@
--- This is a sample file to be use as a baseline for our databases we test ourselves, try to keep our own database as close as to this pls
+-- Kevin created the structure and table creations. Patrick modified to match persistent database and login/authentication specs.
 CREATE DATABASE IF NOT EXISTS QueueSmartDB;
 USE QueueSmartDB;
 
 CREATE TABLE UserCredentials (
-	user_ID INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(150) NOT NULL UNIQUE,
+	user_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+	email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    ROLE ENUM('User', 'Administrator') NOT NULL DEFAULT 'User',
+    role ENUM('User', 'Administrator') NOT NULL DEFAULT 'User',
     creationDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 CREATE TABLE UserProfile (
 	profile_ID INT AUTO_INCREMENT PRIMARY KEY,
-    user_ID INT NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
-    email VARCHAR(150) NOT NULL,
+    user_id INT NOT NULL,
     preferences TEXT,
     
     CONSTRAINT fk_userprofile_credentials
@@ -22,11 +22,9 @@ CREATE TABLE UserProfile (
         ON DELETE CASCADE,
 
     CONSTRAINT uq_userprofile_user
-        UNIQUE (user_id),
-
-    CONSTRAINT uq_userprofile_email
-        UNIQUE (email)
+        UNIQUE (user_id)
 );
+
 CREATE TABLE Service (
     service_id INT AUTO_INCREMENT PRIMARY KEY,
     service_name VARCHAR(100) NOT NULL,
