@@ -48,7 +48,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setupHistoryPage();
     }
 });
-
 //Join Queue Page
 async function setupJoinQueuePage() {
     const serviceSelect = document.getElementById("serviceSelect");
@@ -149,33 +148,27 @@ async function setupJoinQueuePage() {
         serviceSelect.value = "";
     });
 }
-
-//dashboard page
-function setupDashboardPage() {
+// 7/29/2026 implmenting the new dynmaic after removing the hard-coded selection
+async function setupDashboardPage() {
     const currentQueue = getCurrentQueue();
-
     const serviceName = document.getElementById("dashboardService");
     const queuePosition = document.getElementById("dashboardPosition");
     const waitTime = document.getElementById("dashboardWaitTime");
     const queueStatus = document.getElementById("dashboardStatus");
-    //const notificationList = document.getElementById("dashboardNotifications");
 
+    //calling loadDashboardPage()
+    await loadDashboardServices();
     if (currentQueue) {
         if (serviceName) serviceName.textContent = currentQueue.serviceName;
         if (queuePosition) queuePosition.textContent = currentQueue.position;
         if (waitTime) waitTime.textContent = currentQueue.estimatedWait;
         if (queueStatus) queueStatus.textContent = currentQueue.status;
     }
-
-    //    if (notificationList) {
-    //        displayNotifications(notificationList);
-    //    }
 }
 
 //queue status page
 function setupQueueStatusPage() {
     const currentQueue = getCurrentQueue();
-
     const serviceName = document.getElementById("statusService");
     const queuePosition = document.getElementById("statusPosition");
     const waitTime = document.getElementById("statusWaitTime");
@@ -189,7 +182,6 @@ function setupQueueStatusPage() {
         }
         return;
     }
-
     if (serviceName){
         serviceName.textContent = currentQueue.serviceName;
     }
@@ -304,8 +296,6 @@ function setupHistoryPage() {
     if (summaryCanceled) summaryCanceled.textContent = canceledCount;
     if (summaryNoShow) summaryNoShow.textContent = noShowCount;
 }
-
-
 //Helper functions
 function getCurrentQueue() {
     const queueData = localStorage.getItem("currentQueue");
@@ -316,45 +306,6 @@ function getCurrentQueue() {
 
     return JSON.parse(queueData);
 }
-/*
-function addNotification(message) {
-    const notifications = getNotifications();
-
-    notifications.unshift({
-        message: message,
-        time: new Date().toLocaleTimeString()
-    });
-
-    localStorage.setItem("notifications", JSON.stringify(notifications));
-}
-
-function getNotifications() {
-    const notifications = localStorage.getItem("notifications");
-
-    if (!notifications) {
-        return [];
-    }
-
-    return JSON.parse(notifications);
-}
-
-function displayNotifications(notificationList) {
-    const notifications = getNotifications();
-
-    notificationList.innerHTML = "";
-
-    if (notifications.length === 0) {
-        notificationList.innerHTML = "<li>No notifications yet.</li>";
-        return;
-    }
-
-    notifications.forEach(notification => {
-        const li = document.createElement("li");
-        li.textContent = `${notification.message} (${notification.time})`;
-        notificationList.appendChild(li);
-    });
-}
-*/
 function addHistoryRecord(serviceName, status) {
     const history = getHistory();
 
@@ -365,7 +316,6 @@ function addHistoryRecord(serviceName, status) {
     if (status.toLowerCase() === "canceled") {
         statusClass = "canceled";
     }
-
     if (status.toLowerCase() === "no show") {
         statusClass = "no-show";
     }
@@ -377,7 +327,6 @@ function addHistoryRecord(serviceName, status) {
         status: status,
         statusClass: statusClass
     });
-
     localStorage.setItem("queueHistory", JSON.stringify(history));
 }
 
@@ -390,7 +339,6 @@ function getHistory() {
 
     return JSON.parse(history);
 }
-
 function getNextQueuePosition(serviceId) {
     const queueCounts = JSON.parse(localStorage.getItem("queueCounts")) || {};
     if (!queueCounts[serviceId]) {
@@ -410,8 +358,7 @@ function decreaseQueueCount(serviceId) {
 
     localStorage.setItem("queueCounts", JSON.stringify(queueCounts));
 }
-
-//this section is added to assist in integrating the
+// this section is added to assist in integrating the
 async function loadServicesDropdown() {
     const serviceSelect = document.getElementById("serviceSelect");
 
@@ -441,3 +388,39 @@ async function loadServicesDropdown() {
         serviceSelect.innerHTML = `<option value="">Unable to load services</option>`;
     }
 }
+async function loadDashboardServices() {
+    const serviceGrid = document.getElementById("dashboardServiceGrid");
+
+    if (!serviceGrid) {
+        return;
+    }
+    try {
+        const response = await fetch(`${baseAPI}/services`);
+
+        if (!response.ok) {
+            throw new Error("Failed to load services from backend");
+        }
+
+        const services = await response.json();
+
+        serviceGrid.innerHTML = "";
+
+        services.forEach(service => {
+            const serviceCard = document.createElement("div");
+            serviceCard.classList.add("service-card");
+
+            serviceCard.innerHTML = `
+                <h3>${service.service_name}</h3>
+                <p>Estimated wait: ${service.expected_duration} minutes</p>
+                <a href="QSJoinQueue.html">Join Queue</a>
+            `;
+
+            serviceGrid.appendChild(serviceCard);
+        });
+
+    } catch (error) {
+        console.error("Error loading dashboard services:", error);
+        serviceGrid.innerHTML = "<p>Unable to load services.</p>";
+    }
+}
+
