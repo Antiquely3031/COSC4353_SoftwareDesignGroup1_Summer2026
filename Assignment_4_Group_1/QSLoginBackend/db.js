@@ -12,7 +12,7 @@ const pool = mysql.createPool({
 module.exports = {
   findUserByEmail: async (email) => {
     const [rows] = await pool.execute(
-      'SELECT * FROM user_credentials WHERE email = ?', [email]
+      'SELECT * FROM UserCredentials WHERE email = ?', [email]
     );
     return rows[0]; // undefined if not found — same behavior as fakeDB
   },
@@ -20,19 +20,19 @@ module.exports = {
     const { name, email, password, role } = userData;
     const dbRole = role === 'admin' ? 'Administrator' : 'User';
     const [result] = await pool.execute(
-      'INSERT INTO user_credentials (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
+      'INSERT INTO UserCredentials (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
       [name, email, password, dbRole]
     );
     return { id: result.insertId, name, email, role: dbRole };
   },
   updateUserRole: async (email, role) => {
     await pool.execute(
-      'UPDATE user_credentials SET role = ? WHERE email = ?',
+      'UPDATE UserCredentials SET role = ? WHERE email = ?',
       [role, email]
     );
   },
   deleteUserByEmail: async (email) => {
-    await pool.execute('DELETE FROM user_credentials WHERE email = ?', [email]);
+    await pool.execute('DELETE FROM UserCredentials WHERE email = ?', [email]);
   },
   closePool: async () => {
     await pool.end();
