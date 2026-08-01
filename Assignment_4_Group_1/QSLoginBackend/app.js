@@ -2,9 +2,22 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const db = require('./db');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
 
 app.use(cors());
 app.use(express.json());
@@ -130,6 +143,52 @@ app.put('/api/user/update', async (req, res) => {
   await db.updateUser(user.user_id, updates);
 
   res.status(200).json({message: 'Account updated successfully.'});
+});
+
+app.post('/api/forgot-password', async (req, res) => {
+  const {email} = req.body;
+  if(!email) {
+    return res.status(400).json({error: 'Email is required.'});
+  }
+
+  const user = await db.findUserByEmail(email);
+  if(user) {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 3600000);
+    await db.setResetToken(user.user_id, token, expires);
+
+    const resetLink = `http://127.0.0.1:5500/QSLoginBackend/reset-password.html?token=${token}`;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: 'QueueSmart Password Reset',
+      text: `Click this link to reset your password: ${resetLink}\n\nThis link expires in 1 hour.`
+    });
+  }
+  res.json({message: 'A reset link has been sent to the email provided.'});
+});
+
+app.post('/api/reset-password', async (req, res) => {
+  const {token, newPassword} = req.body;
+  if(!token || !newPassword) {
+    return res.status(400).json({error: 'Token and new password are required.'});
+  }
+
+  if(newPassword.length < 8 || newPassword.length > 20) {
+    return res.status(400).json({error: 'Password must be between 8 and 20 characters in length.'});
+  }
+
+  const user = await db.findUserByResetToken(token);
+  if(!user || !user.reset_token_expires || new Date() > new Date(user.reset_token_expires)) {
+    return res.status(400).json({error: 'Reset link is invalid or has expired.'});
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  await db.updateUser(user.user_id, {password_hash: hashedPassword});
+  await db.clearResetToken(user.user_id);
+
+  res.json({message: 'Password has successfully been reset.'});
 });
 
 module.exports = app;

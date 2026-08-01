@@ -52,6 +52,25 @@ module.exports = {
   deleteUserByEmail: async (email) => {
     await pool.execute('DELETE FROM UserCredentials WHERE email = ?', [email]);
   },
+  setResetToken: async (user_id, token, expires) => {
+    await pool.execute(
+      `UPDATE UserCredentials SET reset_token = ?, reset_token_expires = ? WHERE user_id = ?`,
+      [token, expires, user_id]
+    );
+  },
+  findUserByResetToken: async (token) => {
+    const [rows] = await pool.execute(
+      `SELECT * FROM UserCredentials WHERE reset_token = ?`,
+      [token]
+    );
+    return rows[0];
+  },
+  clearResetToken: async (user_id) => {
+    await pool.execute(
+      `UPDATE UserCredentials SET reset_token = NULL, reset_token_expires = NULL WHERE user_id = ?`,
+      [user_id]
+    );
+  },
   closePool: async () => {
     await pool.end();
   }
