@@ -99,4 +99,37 @@ app.post('/api/debug/make-admin', async (req, res) => {
   });
 });
 
+app.put('/api/user/update', async (req, res) => {
+  const {email, currentPassword, newName, newPassword} = req.body;
+  if(!email || !currentPassword) {
+    return res.status(400).json({error: 'Email and current password are required.'});
+  }
+  
+  const user = await db.findUserByEmail(email);
+  if(!user) {
+    return res.status(401).json({error: 'Invalid credentials.'});
+  }
+
+  const passwordMatches = await bcrypt.compare(currentPassword, user.password_hash);
+  if(!passwordMatches) {
+    return res.status(401).json({error: 'Current password is incorrect.'});
+  }
+
+  const updates = {};
+  if(newName) {
+    updates.name = newName;
+  }
+
+  if(newPassword) {
+    if(newPassword.length < 8 || newPassword.length > 20) {
+      return res.status(400).json({error: 'New password must be between 8 and 20 characters in length.'});
+    }
+    updates.password_hash = await bcrypt.hash(newPassword, 10);
+  }
+
+  await db.updateUser(user.user_id, updates);
+
+  res.status(200).json({message: 'Account updated successfully.'});
+});
+
 module.exports = app;

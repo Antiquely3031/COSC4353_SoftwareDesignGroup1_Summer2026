@@ -4,6 +4,7 @@ function switchTab(tab){
   const loginForm = document.getElementById('loginForm');
   const signupForm = document.getElementById('signupForm');
   const adminForm = document.getElementById('adminForm');
+  const updateForm = document.getElementById('updateForm');
   const mainToggle = document.getElementById('mainToggle');
   const heading = document.getElementById('heading');
   const subtext = document.getElementById('subtext');
@@ -14,10 +15,13 @@ function switchTab(tab){
   loginForm.classList.add('hidden');
   signupForm.classList.add('hidden');
   adminForm.classList.add('hidden');
+  updateForm.classList.add('hidden');
+  document.getElementById('manageAccountLink').classList.add('hidden');
 
   loginForm.reset();
   signupForm.reset();
   adminForm.reset();
+  updateForm.reset();
   clearAllErrors();
 
   if(tab === 'login'){
@@ -49,6 +53,14 @@ function switchTab(tab){
     adminForm.classList.remove('hidden');
     heading.textContent = 'Administrator Login';
     subtext.textContent = 'Restricted access for QueueSmart staff.';
+    footLink.textContent = 'Back to login';
+    footLink.onclick = () => switchTab('login');
+    adminLink.style.display = 'none';
+  } else if(tab === 'update'){
+    mainToggle.classList.add('hidden');
+    updateForm.classList.remove('hidden');
+    heading.textContent = 'Manage Your Account';
+    subtext.textContent = 'Update your name or password using your current credentials.';
     footLink.textContent = 'Back to login';
     footLink.onclick = () => switchTab('login');
     adminLink.style.display = 'none';
@@ -105,10 +117,12 @@ async function handleLogin(e){
 
       if(!response.ok) {
         showToast(data.error || 'Login failed');
+        document.getElementById('manageAccountLink').classList.remove('hidden');
         return false;
       }
 
       showToast(`Welcome back, ${data.name}`);
+      sessionStorage.setItem('qs_user', JSON.stringify(data));
       window.location.href = '../A2_HTML/QSUserDashboard.html';
     } catch(err) {
     showToast('Could not reach the server');
@@ -145,6 +159,7 @@ async function handleAdminLogin(e){
       }
 
       showToast(`Welcome, adminstrator ${data.name}`);
+      sessionStorage.setItem('qs_user', JSON.stringify(data));
       window.location.href = '../A2_HTML/AdminDash.html';
     } catch(err) {
     showToast('Could not reach the server');
@@ -195,5 +210,34 @@ async function handleSignup(e){
       showToast('Could not reach the server.');
     }
   }
+  return false;
+}
+
+async function handleUpdateAccount(e) {
+  e.preventDefault();
+  const currentUser = JSON.parse(sessionStorage.getItem('qs_user') || 'null');
+  if(!currentUser) {
+    showToast('You must be logged in to update your account.');
+    return false;
+  }
+
+  const email = currentUser.email;
+  const currentPassword = document.getElementById('currentPassword').value;
+  const newName = document.getElementById('newName').value.trim();
+  const newPassword = document.getElementById('newPassword').value;
+  
+  const response = await fetch('http://localhost:3000/api/user/update', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email, currentPassword, newName, newPassword})
+  });
+
+  const data = await response.json();
+  if(!response.ok) {
+    showToast(data.error || 'Update failed');
+    return false;
+  }
+
+  showToast('Account updated successfuly');
   return false;
 }

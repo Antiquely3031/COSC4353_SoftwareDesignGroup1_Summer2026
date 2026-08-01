@@ -31,6 +31,24 @@ module.exports = {
       [role, email]
     );
   },
+  updateUser: async (user_id, updates) => {
+    const fields = [];
+    const values = [];
+    if(updates.name) {
+      fields.push('name = ?');
+      values.push(updates.name);
+    }
+    if(updates.password_hash) {
+      fields.push('password_hash = ?');
+      values.push(updates.password_hash);
+    }
+    if(fields.length === 0) return;
+    values.push(user_id);
+    await pool.execute(
+      `UPDATE UserCredentials SET ${fields.join(', ')} WHERE user_id = ?`,
+      values
+    );
+  },
   deleteUserByEmail: async (email) => {
     await pool.execute('DELETE FROM UserCredentials WHERE email = ?', [email]);
   },

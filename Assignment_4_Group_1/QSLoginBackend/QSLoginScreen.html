@@ -233,6 +233,9 @@
         <div class="errmsg" id="loginPasswordErr"></div>
       </div>
       <button type="submit" class="submit">Log in</button>
+      <p id="manageAccountLink" class="admin-link hidden" style="text-align:center; margin-top:10px; cursor:pointer;" onclick="switchTab('update')">
+        Already logged in elsewhere? Manage your account.
+      </p>
     </form>
 
     <form id="signupForm" class="hidden" onsubmit="return handleSignup(event)">
@@ -271,6 +274,22 @@
         <div class="errmsg" id="adminPasswordErr"></div>
       </div>
       <button type="submit" class="submit">Log in as Admin</button>
+    </form>
+
+    <form id="updateForm" class="hidden" onsubmit="return handleUpdateAccount(event)">
+      <div class="field">
+        <label>Current Password</label>
+        <input type="password" id="currentPassword" placeholder="••••••••">
+      </div>
+      <div class="field">
+        <label>New Name (optional)</label>
+        <input type="text" id="newName" placeholder="Leave blank to keep current">
+      </div>
+      <div class="field">
+        <label>New Password (optional)</label>
+        <input type="password" id="newPassword" placeholder="Leave blank to keep current">
+      </div>
+      <button type="submit" class="submit">Save Changes</button>
     </form>
 
     <div class="foot">
