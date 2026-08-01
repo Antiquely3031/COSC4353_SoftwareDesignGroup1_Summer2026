@@ -12,7 +12,7 @@
     --card:#172B3E;
     --field:#172B3E;
     --text:#F2F9F8;
-    --muted:#8b8b96;
+    --muted:#F2F9F8;
     --linktext:#F2F9F8;
     --gold-dim: rgba(201,161,92,0.35);
     --error:#e8836b;
@@ -130,6 +130,10 @@
     font-size:14px;
     outline:none;
     transition:border-color .15s ease;
+  }
+  .field input::placeholder{
+    color: var(--muted);
+    opacity: 1;
   }
   .field input:focus{
     border-color:var(--gold-dim);
