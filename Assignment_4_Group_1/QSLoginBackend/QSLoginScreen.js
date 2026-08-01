@@ -268,7 +268,7 @@ async function handleForgotPassword(e){
     });
 
     const data = await response.json();
-    showToast(data.message || 'If that email exists, a reset link has been sent.');
+    showToast(data.message || 'A reset link has been sent to the email provided.');
   } catch(err) {
     showToast('Could not reach the server');
   }
