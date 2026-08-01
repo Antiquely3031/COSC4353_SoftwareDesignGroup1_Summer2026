@@ -10,6 +10,7 @@ function switchTab(tab){
   const subtext = document.getElementById('subtext');
   const footLink = document.getElementById('footLink');
   const adminLink = document.getElementById('adminLink');
+  const forgotForm = document.getElementById('forgotForm');
 
   // Resets forms
   loginForm.classList.add('hidden');
@@ -17,11 +18,13 @@ function switchTab(tab){
   adminForm.classList.add('hidden');
   updateForm.classList.add('hidden');
   document.getElementById('manageAccountLink').classList.add('hidden');
+  forgotForm.classList.add('hidden');
 
   loginForm.reset();
   signupForm.reset();
   adminForm.reset();
   updateForm.reset();
+  forgotForm.reset();
   clearAllErrors();
 
   if(tab === 'login'){
@@ -61,6 +64,14 @@ function switchTab(tab){
     updateForm.classList.remove('hidden');
     heading.textContent = 'Manage Your Account';
     subtext.textContent = 'Update your name or password using your current credentials.';
+    footLink.textContent = 'Back to login';
+    footLink.onclick = () => switchTab('login');
+    adminLink.style.display = 'none';
+  } else if(tab === 'forgot'){
+    mainToggle.classList.add('hidden');
+    forgotForm.classList.remove('hidden');
+    heading.textContent = 'Reset Your Password';
+    subtext.textContent = "Enter your email to be sent a reset link.";
     footLink.textContent = 'Back to login';
     footLink.onclick = () => switchTab('login');
     adminLink.style.display = 'none';
@@ -241,3 +252,26 @@ async function handleUpdateAccount(e) {
   showToast('Account updated successfuly');
   return false;
 }
+
+async function handleForgotPassword(e){
+  e.preventDefault();
+  const email = document.getElementById('forgotEmail').value.trim();
+  if(!email){setError('forgotEmailErr', 'Email is required'); return false;}
+  if(!isValidEmail(email)){setError('forgotEmailErr', 'Enter a valid email'); return false;}
+  setError('forgotEmailErr','');
+
+  try {
+    const response = await fetch('http://localhost:3000/api/forgot-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email})
+    });
+
+    const data = await response.json();
+    showToast(data.message || 'If that email exists, a reset link has been sent.');
+  } catch(err) {
+    showToast('Could not reach the server');
+  }
+  return false;
+}
+

@@ -236,6 +236,9 @@
       <p id="manageAccountLink" class="admin-link hidden" style="text-align:center; margin-top:10px; cursor:pointer;" onclick="switchTab('update')">
         Already logged in elsewhere? Manage your account.
       </p>
+      <p id="forgotPasswordLink" style="text-align:center; margin-top:10px; cursor:pointer; color:var(--muted); font-weight:500; font-size:12px;" onclick="switchTab('forgot')">
+        Forgot your password?
+      </p>
     </form>
 
     <form id="signupForm" class="hidden" onsubmit="return handleSignup(event)">
@@ -290,6 +293,15 @@
         <input type="password" id="newPassword" placeholder="Leave blank to keep current">
       </div>
       <button type="submit" class="submit">Save Changes</button>
+    </form>
+
+    <form id="forgotForm" class="hidden" onsubmit="return handleForgotPassword(event)">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="forgotEmail" placeholder="you@example.com">
+        <div class="errmsg" id="forgotEmailErr"></div>
+      </div>
+      <button type="submit" class="submit">Send Reset Link</button>
     </form>
 
     <div class="foot">
