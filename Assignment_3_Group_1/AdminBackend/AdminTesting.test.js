@@ -231,54 +231,54 @@ describe('Network Capabilities', () => {
     });
 
     test('inserts new high-priority service (priority 3) at the bottom of priority 3 group', async () => {
-    const newService = {
-      name: 'High Priority Test Service',
-      description: 'Testing relative insertion for priority 3',
-      expected_duration: 15,
-      priority: 3
-    };
+      const newService = {
+        name: 'High Priority Test Service',
+        description: 'Testing relative insertion for priority 3',
+        expected_duration: 15,
+        priority: 3
+      };
 
-    const response = await request(testServer)
-      .post('/api/admin/services')
-      .send(newService);
+      const response = await request(testServer)
+        .post('/api/admin/services')
+        .send(newService);
 
-    expect(response.status).toBe(201);
+      expect(response.status).toBe(201);
 
-    // Fetch updated services container
-    const getRes = await request(testServer).get('/api/admin/services');
-    const services = getRes.body;
+      // Fetch updated services container
+      const getRes = await request(testServer).get('/api/admin/services');
+      const services = getRes.body;
 
-    // Find index of the newly inserted service
-    const insertedIndex = services.findIndex(s => s.name === 'High Priority Test Service');
-    
-    // Verify it is placed after existing Priority 3 services and before Priority 2 services
-    expect(insertedIndex).toBeGreaterThan(-1);
-    if (insertedIndex < services.length - 1) {
-      expect(services[insertedIndex + 1].priority).toBeLessThanOrEqual(3);
-    }
-  });
+      // Find index of the newly inserted service
+      const insertedIndex = services.findIndex(s => s.name === 'High Priority Test Service');
+      
+      // Verify it is placed after existing Priority 3 services and before Priority 2 services
+      expect(insertedIndex).toBeGreaterThan(-1);
+      if (insertedIndex < services.length - 1) {
+        expect(services[insertedIndex + 1].priority).toBeLessThanOrEqual(3);
+      }
+    });
 
-  test('inserts new low-priority service (priority 1) at the end of the container', async () => {
-    const newService = {
-      name: 'Low Priority Test Service',
-      description: 'Testing relative insertion for priority 1',
-      expected_duration: 15,
-      priority: 1
-    };
+    test('inserts new low-priority service (priority 1) at the end of the container', async () => {
+      const newService = {
+        name: 'Low Priority Test Service',
+        description: 'Testing relative insertion for priority 1',
+        expected_duration: 15,
+        priority: 1
+      };
 
-    const response = await request(testServer)
-      .post('/api/admin/services')
-      .send(newService);
+      const response = await request(testServer)
+        .post('/api/admin/services')
+        .send(newService);
 
-    expect(response.status).toBe(201);
+      expect(response.status).toBe(201);
 
-    const getRes = await request(testServer).get('/api/admin/services');
-    const services = getRes.body;
+      const getRes = await request(testServer).get('/api/admin/services');
+      const services = getRes.body;
 
-    // Verify it is inserted at the very end (or within priority 1 block)
-    const lastService = services[services.length - 1];
-    expect(lastService.priority).toBe(1);
-  });
+      // Verify it is inserted at the very end (or within priority 1 block)
+      const lastService = services[services.length - 1];
+      expect(lastService.priority).toBe(1);
+    });
   });
 
   describe('HTTP PUT /api/admin/services', () => {
@@ -386,6 +386,38 @@ describe('Network Capabilities', () => {
         expect(updatedService.Queue_Array.length).toBe(59);
         expect(updatedService.Queue_Array[0]).toBe('Person 2');
         done();
+      });
+    });
+
+    test('handles serve_client notification branches for object payloads and missing fetch', (done) => {
+      // Reorder a service's queue to contain object entries with/without userId
+      clientSocket.emit('reorder_queue', {
+        service_name: 'Placeholder 10',
+        updated_queue: [{ userId: 'user_123' }, { userId: null }]
+      });
+
+      clientSocket.once('queue_updated', () => {
+        // First serve: Pops { userId: 'user_123' } -> covers line 244 (object with userId)
+        clientSocket.emit('serve_client', { service_name: 'Placeholder 10' });
+
+        clientSocket.once('queue_updated', () => {
+          // Second serve: Pops { userId: null } -> covers line 246 (userId === null return)
+          clientSocket.emit('serve_client', { service_name: 'Placeholder 10' });
+
+          clientSocket.once('queue_updated', () => {
+            // Third check: Temporarily remove global.fetch to cover line 242 (typeof fetch !== 'function')
+            const originalFetch = global.fetch;
+            delete global.fetch;
+
+            clientSocket.emit('serve_client', { service_name: 'Placeholder 1' });
+
+            clientSocket.once('queue_updated', () => {
+              // Restore global.fetch
+              global.fetch = originalFetch;
+              done();
+            });
+          });
+        });
       });
     });
 
