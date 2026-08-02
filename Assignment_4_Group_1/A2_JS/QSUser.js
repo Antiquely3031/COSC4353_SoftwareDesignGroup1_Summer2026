@@ -167,65 +167,134 @@ async function setupDashboardPage() {
 }
 
 //queue status page
-function setupQueueStatusPage() {
-    const currentQueue = getCurrentQueue();
-    const serviceName = document.getElementById("statusService");
-    const queuePosition = document.getElementById("statusPosition");
-    const waitTime = document.getElementById("statusWaitTime");
-    const queueStatus = document.getElementById("statusCurrent");
-    const statusMessage = document.getElementById("statusMessage");
-    const leaveButton = document.getElementById("statusLeaveButton");
+async function setupJoinQueuePage() {
+    const serviceSelect = document.getElementById("serviceSelect");
+    const selectedService = document.getElementById("selectedService");
+    const estimatedWait = document.getElementById("estimatedWait");
+    const joinQueueForm = document.getElementById("joinQueueForm");
+    const leaveQueueButton = document.getElementById("leaveQueueButton");
+    const joinQueueMessage = document.getElementById("joinQueueMessage");
 
-    if (!currentQueue) {
-        if (statusMessage) {
-            statusMessage.textContent = "You are not currently waiting in a queue.";
-        }
+    if (!serviceSelect || !joinQueueForm) {
         return;
     }
-    if (serviceName){
-        serviceName.textContent = currentQueue.serviceName;
-    }
-    if (queuePosition){
-        queuePosition.textContent = currentQueue.position;
-    }
-    //improved relability in a event of the QSNotify indirectly calleds left
-    if (window.QSNotify && typeof QSNotify.positionUpdate === "function") {
-        QSNotify.positionUpdate(currentQueue.serviceName, Number(currentQueue.position));
-    }
-    if (waitTime) waitTime.textContent = `${currentQueue.estimatedWait} minutes`;
-    if (queueStatus) queueStatus.textContent = currentQueue.status;
+    //insertion of loadServicesDropdown() beginning of integration of database into JS
+    await loadServicesDropdown();
 
-    if (statusMessage) {
-        statusMessage.textContent =
-            `You are currently waiting for ${currentQueue.serviceName}.`;
+    // Update wait time when service is selected
+    function updateSelectedService() {
+        const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+
+        if (!serviceSelect.value) {
+            selectedService.textContent = "None selected";
+            estimatedWait.textContent = "Select a service";
+            return;
+        }
+
+        selectedService.textContent = selectedOption.textContent.trim();
+        estimatedWait.textContent = `${selectedOption.dataset.wait} minutes`;
     }
+    serviceSelect.addEventListener("change", updateSelectedService);
 
-    if (leaveButton) {
-        leaveButton.addEventListener("click", () => {
-            decreaseQueueCount(currentQueue.serviceId);
+    //will immediately when page loads
+    updateSelectedService();
 
-            if (window.QSNotify && typeof QSNotify.left === "function") {
-                QSNotify.left(currentQueue.serviceName);
+    joinQueueForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        //local storage implementation to be replaced by a backend calls 
+        // const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+
+        // if (!serviceSelect.value) {
+        //     joinQueueMessage.textContent = "Please select a service before joining a queue.";
+        //     return;
+        // }
+        // const existingQueue = getCurrentQueue();
+
+        // if (existingQueue) {
+        //     joinQueueMessage.textContent =
+        //         `You are already in the ${existingQueue.serviceName} queue at position ${existingQueue.position}.`;
+        //     return;
+        // }
+        // //simulate a queue line (current position)
+        // const queueData = {
+        //     serviceId: serviceSelect.value,
+        //     serviceName: selectedOption.textContent.trim(),
+        //     estimatedWait: selectedOption.dataset.wait,
+        //     position: getNextQueuePosition(serviceSelect.value),
+        //     status: "Waiting",
+        //     joinedAt: new Date().toLocaleString()
+        // };
+        // // Old placeholder local storage code implementation replaced by backend call
+        // // localStorage.setItem("currentQueue", JSON.stringify(queueData));
+        // fetch('${baseAPI}/queue/join',{
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json'
+        //     },
+        //     body: JSON.stringify({
+        //         userId: userID,
+        //         serviceId: serviceSelect.value
+        //     })
+        // });
+        // if (window.QSNotify && typeof QSNotify.queueJoined === "function") {
+        //     QSNotify.queueJoined(queueData.serviceName);
+        // }
+        // addHistoryRecord(queueData.serviceName, "Joined");
+
+        // joinQueueMessage.textContent =
+        //     `You joined the ${queueData.serviceName} queue. ` +
+        //     `Your position is ${queueData.position}, and your estimated wait time is ${queueData.estimatedWait} minutes.`;
+        try {
+            const response = await fetch(`${baseAPI}/queue/join`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    userId: userID,
+                    serviceId: serviceSelect.value
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                joinQueueMessage.textContent = data.error || "Failed to join queue.";
+                return;
             }
-            addHistoryRecord(currentQueue.serviceName, "Canceled");
 
-            localStorage.removeItem("currentQueue");
+            const queueData = {
+                serviceId: data.serviceId,
+                serviceName: data.serviceName,
+                estimatedWait: data.estimatedWait,
+                position: data.position,
+                status: data.status,
+                joinedAt: new Date().toLocaleString()
+            };
 
-            if (serviceName) serviceName.textContent = "No active queue";
-            if (queuePosition) queuePosition.textContent = "--";
-            if (waitTime) waitTime.textContent = "--";
-            if (queueStatus) queueStatus.textContent = "Not Joined";
+            // Temporary: keep this so Dashboard and Queue Status still display correctly
+            // until we create GET /api/queue/status/:userId
+            localStorage.setItem("currentQueue", JSON.stringify(queueData));
 
-            statusMessage.textContent =
-                `You have left the ${currentQueue.serviceName} queue.`;
-        });
-    }
+            if (window.QSNotify && typeof QSNotify.queueJoined === "function") {
+                QSNotify.queueJoined(queueData.serviceName);
+            }
+
+            addHistoryRecord(queueData.serviceName, "Joined");
+
+            joinQueueMessage.textContent =
+                `You joined the ${queueData.serviceName} queue. ` +
+                `Your position is ${queueData.position}, and your estimated wait time is ${queueData.estimatedWait} minutes.`;
+
+        } catch (error) {
+            console.error("Error joining queue:", error);
+            joinQueueMessage.textContent = "Unable to connect to the backend.";
+        }
+    });
 }
-
 //queue history page
 function setupHistoryPage() {
     const historyListBody = document.getElementById("historyListBody");
-
     const summaryTotal = document.getElementById("summaryTotal");
     const summaryServed = document.getElementById("summaryServed");
     const summaryCanceled = document.getElementById("summaryCanceled");
@@ -238,7 +307,6 @@ function setupHistoryPage() {
     }
 
     const history = getHistory();
-
     historyListBody.innerHTML = "";
 
     if (history.length === 0) {
@@ -255,7 +323,6 @@ function setupHistoryPage() {
         if (summaryServed) summaryServed.textContent = 0;
         if (summaryCanceled) summaryCanceled.textContent = 0;
         if (summaryNoShow) summaryNoShow.textContent = 0;
-
         return;
     }
 
@@ -267,15 +334,12 @@ function setupHistoryPage() {
         if (record.status.toLowerCase() === "served" || record.status.toLowerCase() === "completed") {
             servedCount++;
         }
-
         if (record.status.toLowerCase() === "canceled" || record.status.toLowerCase() === "cancelled") {
             canceledCount++;
         }
-
         if (record.status.toLowerCase() === "no show") {
             noShowCount++;
         }
-
         const row = document.createElement("div");
         row.classList.add("history-row");
 
@@ -287,7 +351,6 @@ function setupHistoryPage() {
                 ${record.status}
             </span>
         `;
-
         historyListBody.appendChild(row);
     });
 
@@ -303,12 +366,10 @@ function getCurrentQueue() {
     if (!queueData) {
         return null;
     }
-
     return JSON.parse(queueData);
 }
 function addHistoryRecord(serviceName, status) {
     const history = getHistory();
-
     const now = new Date();
     //default value
     let statusClass = "completed";
@@ -336,7 +397,6 @@ function getHistory() {
     if (!history) {
         return [];
     }
-
     return JSON.parse(history);
 }
 function getNextQueuePosition(serviceId) {
@@ -346,7 +406,6 @@ function getNextQueuePosition(serviceId) {
     }
     queueCounts[serviceId]++;
     localStorage.setItem("queueCounts", JSON.stringify(queueCounts));
-
     return queueCounts[serviceId];
 }
 function decreaseQueueCount(serviceId) {
