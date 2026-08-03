@@ -150,6 +150,59 @@ app.post("/api/queue/leave", async (req, res) => {
         });
     }
 });
+
+//to get current queue status for user
+app.get("/api/queue/status/:userId", async (req, res) => {
+    try {
+        const {userId} = req.params;
+        const [rows] = await db.query(
+            `SELECT 
+                qe.queue_entry_id,
+                qe.queue_id,
+                qe.user_id,
+                qe.position,
+                qe.join_time,
+                qe.status,
+                s.service_id,
+                s.service_name,
+                s.expected_duration
+             FROM QueueEntry qe
+             JOIN \`Queue\` q ON qe.queue_id = q.queue_id
+             JOIN Service s ON q.service_id = s.service_id
+             WHERE qe.user_id = ? AND qe.status = 'waiting'
+             LIMIT 1`,
+             [userId]
+        );
+
+        if(rows.length === 0)
+        {
+            return res.status(404).json({
+                error: "user currently not in queue"
+            });
+        }
+
+        const entry = rows[0];
+
+        res.json({
+            userId: entry.user_id,
+            serviceId: entry.service_id,
+            serviceName: entry.service_name,
+            queueEntryId: entry.queue_entry_id,
+            queueId: entry.queue_id,
+            position: entry.position,
+            estimatedWait: entry.position * entry.expected_duration,
+            joinedAt: entry.join_time,
+            status: entry.status
+        });
+    }
+    catch(error)
+    {
+        console.error("Error retrieving status of queue for user", error);
+        res.status(500).json({
+            error: "Failed to retrieve queue stats"
+        })
+    }
+});
 const PORT = process.env.PORT || 3000;
 //Connection testing, if this appears we have a successful commection
 app.listen(PORT, () => {
