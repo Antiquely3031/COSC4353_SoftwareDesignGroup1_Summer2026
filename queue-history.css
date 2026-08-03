@@ -1,0 +1,100 @@
+:root
+{
+    --ink: #1E4CD2;
+    --card: #172B3E;
+    --field: #172B3E;
+    --text: #F2F9F8;
+    --muted: #8b8b96;
+    --error: #e8836b;
+    --background: #07090f;
+    --border: rgba(242, 249, 248, 0.15);
+}
+.table-container
+{
+    width: 100%;
+    overflow-x: auto;
+}
+.history-list
+{
+    width: 100%;
+    margin-top: 15px;
+}
+.history-row {
+    display: grid;
+
+    grid-template-columns:
+        2fr
+        1.3fr
+        1fr
+        1fr;
+
+    gap: 20px;
+
+    align-items: center;
+
+    padding: 15px;
+
+    border-bottom: 1px solid var(--border);
+}
+.history-table th,.history-table td
+{
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+.history-table
+{
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+.history-table th
+{
+    color: var(--text);
+    background-color: var(--field);
+}
+
+.history-table td
+{
+    color: var(--muted);
+}
+
+.history-table tbody tr:hover {
+    background-color: rgba(242, 249, 248, 0.05);
+}
+
+.outcome
+{
+    display: inline-block;
+    width: fit-content;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.outcome.completed
+{
+    background-color: var(--ink);
+    color: var(--text);
+}
+
+.outcome.canceled
+{
+    background-color: var(--error);
+    color: var(--text);
+}
+@media (max-width: 600px)
+{
+
+    .history-table th,
+    .history-table td {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+
+    .outcome {
+        padding: 5px 9px;
+        font-size: 0.75rem;
+    }
+}
