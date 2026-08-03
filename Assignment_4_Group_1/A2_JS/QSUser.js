@@ -2,7 +2,10 @@
 
 const baseAPI = "http://localhost:3000/api";
 // Placeholder user ID because there is no real database/authentication yet
-const userID = 1;
+//const userID = 1;
+
+//temporary,until Patrick finishes with the userCredentials, if failure defaults back to 1
+const userID = Number(sessionStorage.getItem("userID")) || 1;
 
 // Mock service data.
 // Later, this can come from GET /api/services.
