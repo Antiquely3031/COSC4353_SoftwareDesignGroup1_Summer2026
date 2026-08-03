@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">97.31% </span>
+                <span class="strong">97.38% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>181/186</span>
+                <span class='fraction'>186/191</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">96.42% </span>
+                <span class="strong">96.49% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>108/112</span>
+                <span class='fraction'>110/114</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">97.48% </span>
+                <span class="strong">97.54% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>155/159</span>
+                <span class='fraction'>159/163</span>
             </div>
         
             
@@ -444,7 +444,14 @@
 <a name='L379'></a><a href='#L379'>379</a>
 <a name='L380'></a><a href='#L380'>380</a>
 <a name='L381'></a><a href='#L381'>381</a>
-<a name='L382'></a><a href='#L382'>382</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L382'></a><a href='#L382'>382</a>
+<a name='L383'></a><a href='#L383'>383</a>
+<a name='L384'></a><a href='#L384'>384</a>
+<a name='L385'></a><a href='#L385'>385</a>
+<a name='L386'></a><a href='#L386'>386</a>
+<a name='L387'></a><a href='#L387'>387</a>
+<a name='L388'></a><a href='#L388'>388</a>
+<a name='L389'></a><a href='#L389'>389</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -469,6 +476,7 @@
 <span class="cline-any cline-yes">157x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">157x</span>
 <span class="cline-any cline-yes">157x</span>
 <span class="cline-any cline-yes">157x</span>
 <span class="cline-any cline-yes">157x</span>
@@ -508,6 +516,7 @@
 <span class="cline-any cline-yes">9000x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">150x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -653,6 +662,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">156x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
@@ -673,6 +683,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -681,6 +694,7 @@
 <span class="cline-any cline-yes">38x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -849,7 +863,8 @@ const io = new Server(server, { cors: { origin: "*" } });
 class Service_Entry {
   Queue_Array = [];
 &nbsp;
-  constructor(name, description, expected_duration, priority, queue_length, operation_status, queue_array = []) {
+  constructor(service_id, name, description, expected_duration, priority, queue_length, operation_status, queue_array = []) {
+    this.service_id = service_id;
     this.name = name;
     this.priority = priority;
     this.description = description;
@@ -889,6 +904,7 @@ async function Container_Initializer()
       parsedQueue = parsedQueue.filter(item =&gt; item !== null);
 &nbsp;
       return new Service_Entry(
+        row.service_id,
         row.name,
         row.description,
         Number(row.expected_duration),
@@ -948,12 +964,12 @@ function validateServicePayload(payload)
   // Priority Level Field Verification (low / medium / high or numeric 1 / 2 / 3)
   let parsedPriority;
   switch (typeof priority) 
-{
+  {
     case 'string':
       const lowerPrio = priority.toLowerCase().trim();
 &nbsp;
       switch (lowerPrio) 
-    {
+      {
         case 'low': case '1': parsedPriority = 1; break;
         case 'medium': case '2': parsedPriority = 2; break;
         case 'high': case '3': parsedPriority = 3; break;
@@ -980,9 +996,9 @@ function validateServicePayload(payload)
 }
 &nbsp;
 // Functions for Dashboard
-function Status_Changer(service_name, new_status) 
+function Status_Changer(service_id, new_status) 
 {
-  const targetService = Services_Container.find(s =&gt; s.name === service_name);
+  const targetService = Services_Container.find(s =&gt; String(s.service_id) === String(service_id));
 &nbsp;
   if (!targetService) { return null; }
 &nbsp;
@@ -992,11 +1008,11 @@ function Status_Changer(service_name, new_status)
 &nbsp;
 // Express Route to handle status changes
 app.patch('/api/admin/services/status', (req, res) =&gt; {
-  const { name, status } = req.body;
+  const { service_id, status } = req.body;
 &nbsp;
-  if (!(name &amp;&amp; status)) { return res.status(400).json({ error: 'Missing name or status in request body.' }); }
+  if (!(service_id &amp;&amp; status)) { return res.status(400).json({ error: 'Missing service_id or status in request body.' }); }
 &nbsp;
-  const updatedService = Status_Changer(name, status);
+  const updatedService = Status_Changer(service_id, status);
 &nbsp;
   if (updatedService) 
   {
@@ -1024,6 +1040,7 @@ app.post('/api/admin/services', (req, res) =&gt; {
   if (existingService) { return res.status(409).json({ error: 'Service with this name already exists.' }); }
 &nbsp;
   const newService = new Service_Entry(
+    Date.now(),
     name,
     description,
     expected_duration,
@@ -1054,14 +1071,18 @@ app.post('/api/admin/services', (req, res) =&gt; {
 &nbsp;
 // PUT: Update an existing service
 app.put('/api/admin/services', (req, res) =&gt; {
+  const { service_id } = req.body;
+  if (!service_id) { return res.status(400).json({ error: 'service_id is required.' }); }
+&nbsp;
   const validation = validateServicePayload(req.body);
   if (!validation.valid) { return res.status(400).json({ error: validation.error }); }
 &nbsp;
   const { name, description, expected_duration, priority } = validation.data;
 &nbsp;
-  const targetService = Services_Container.find(s =&gt; s.name === name);
+  const targetService = Services_Container.find(s =&gt; String(s.service_id) === String(service_id));
   if (!targetService) { return res.status(404).json({ error: 'Service not found.' }); }
 &nbsp;
+  targetService.name = name;
   targetService.description = description;
   targetService.expected_duration = expected_duration;
   targetService.priority = priority;
@@ -1071,11 +1092,11 @@ app.put('/api/admin/services', (req, res) =&gt; {
   return res.status(200).json({ message: 'Service updated successfully', service: targetService });
 });
 &nbsp;
-// DELETE: Remove a service by name
-app.delete('/api/admin/services/:name', (req, res) =&gt; {
-  const serviceName = req.params.name;
+// DELETE: Remove a service by service_id
+app.delete('/api/admin/services/:id', (req, res) =&gt; {
+  const serviceId = req.params.id;
 &nbsp;
-  const index = Services_Container.findIndex(s =&gt; s.name === serviceName);
+  const index = Services_Container.findIndex(s =&gt; String(s.service_id) === String(serviceId));
   if (index === -1) { return res.status(404).json({ error: 'Service not found.' }); }
 &nbsp;
   Services_Container.splice(index, 1);
@@ -1122,8 +1143,8 @@ io.on('connection', (socket) =&gt; {
 &nbsp;
   // ADMIN ACTION: Serve next client (removes first person from array)
   socket.on('serve_client', (data) =&gt; {
-    const { service_name } = data || {};
-    const service = Services_Container.find(s =&gt; s.name === service_name);
+    const { service_id } = data || {};
+    const service = Services_Container.find(s =&gt; String(s.service_id) === String(service_id));
 &nbsp;
     if (service &amp;&amp; service.Queue_Array.length &gt; 0) 
     {
@@ -1137,8 +1158,8 @@ io.on('connection', (socket) =&gt; {
 &nbsp;
   // ADMIN ACTION: Remove specific client or first client
   socket.on('remove_client', (data) =&gt; {
-    const { service_name, client_index } = data || {};
-    const service = Services_Container.find(s =&gt; s.name === service_name);
+    const { service_id, client_index } = data || {};
+    const service = Services_Container.find(s =&gt; String(s.service_id) === String(service_id));
 &nbsp;
     if (service &amp;&amp; service.Queue_Array.length &gt; 0) 
     {
@@ -1151,8 +1172,8 @@ io.on('connection', (socket) =&gt; {
 &nbsp;
   // ADMIN ACTION: Drag &amp; Drop Reorder
   socket.on('reorder_queue', (data) =&gt; {
-    const { service_name, updated_queue } = data || {};
-    const service = Services_Container.find(s =&gt; s.name === service_name);
+    const { service_id, updated_queue } = data || {};
+    const service = Services_Container.find(s =&gt; String(s.service_id) === String(service_id));
 &nbsp;
     if (service &amp;&amp; Array.isArray(updated_queue)) 
     {
@@ -1164,8 +1185,8 @@ io.on('connection', (socket) =&gt; {
 &nbsp;
   // USER ACTION: Join Queue voluntarily
   socket.on('join_queue', (data) =&gt; {
-    const { service_name, client_name } = data || {};
-    const service = Services_Container.find(s =&gt; s.name === service_name);
+    const { service_id, client_name } = data || {};
+    const service = Services_Container.find(s =&gt; String(s.service_id) === String(service_id));
 &nbsp;
     if (service &amp;&amp; client_name) 
     {
@@ -1177,8 +1198,8 @@ io.on('connection', (socket) =&gt; {
 &nbsp;
   // USER ACTION: Leave Queue voluntarily
   socket.on('leave_queue', (data) =&gt; {
-    const { service_name, client_name } = data || {};
-    const service = Services_Container.find(s =&gt; s.name === service_name);
+    const { service_id, client_name } = data || {};
+    const service = Services_Container.find(s =&gt; String(s.service_id) === String(service_id));
     if (service &amp;&amp; client_name) 
     {
       const index = service.Queue_Array.indexOf(client_name);
@@ -1213,7 +1234,7 @@ module.exports = { app, server, io, startServer, Service_Entry, Container_Initia
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-08-03T08:14:24.655Z
+                at 2026-08-03T19:06:28.335Z
             </div>
         <script src="prettify.js"></script>
         <script>

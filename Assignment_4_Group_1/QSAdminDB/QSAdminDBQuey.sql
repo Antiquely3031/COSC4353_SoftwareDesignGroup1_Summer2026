@@ -29,8 +29,8 @@ SELECT
     ) AS Queue_Array,
     COUNT(qe.queue_entry_id) AS queue_length
 FROM Service s
-LEFT JOIN Queue q ON s.service_id = q.service_id
-LEFT JOIN QueueEntry qe ON q.queue_id = qe.queue_id AND qe.status = 'waiting'
+JOIN Queue q ON s.service_id = q.service_id
+JOIN QueueEntry qe ON q.queue_id = qe.queue_id AND qe.status = 'waiting'
 GROUP BY 
     s.service_id, 
     s.service_name, 

@@ -22,7 +22,8 @@ const io = new Server(server, { cors: { origin: "*" } });
 class Service_Entry {
   Queue_Array = [];
 
-  constructor(name, description, expected_duration, priority, queue_length, operation_status, queue_array = []) {
+  constructor(service_id, name, description, expected_duration, priority, queue_length, operation_status, queue_array = []) {
+    this.service_id = service_id;
     this.name = name;
     this.priority = priority;
     this.description = description;
@@ -62,6 +63,7 @@ async function Container_Initializer()
       parsedQueue = parsedQueue.filter(item => item !== null);
 
       return new Service_Entry(
+        row.service_id,
         row.name,
         row.description,
         Number(row.expected_duration),
@@ -121,12 +123,12 @@ function validateServicePayload(payload)
   // Priority Level Field Verification (low / medium / high or numeric 1 / 2 / 3)
   let parsedPriority;
   switch (typeof priority) 
-{
+  {
     case 'string':
       const lowerPrio = priority.toLowerCase().trim();
 
       switch (lowerPrio) 
-    {
+      {
         case 'low': case '1': parsedPriority = 1; break;
         case 'medium': case '2': parsedPriority = 2; break;
         case 'high': case '3': parsedPriority = 3; break;
@@ -153,9 +155,9 @@ function validateServicePayload(payload)
 }
 
 // Functions for Dashboard
-function Status_Changer(service_name, new_status) 
+function Status_Changer(service_id, new_status) 
 {
-  const targetService = Services_Container.find(s => s.name === service_name);
+  const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
 
   if (!targetService) { return null; }
 
@@ -165,11 +167,11 @@ function Status_Changer(service_name, new_status)
 
 // Express Route to handle status changes
 app.patch('/api/admin/services/status', (req, res) => {
-  const { name, status } = req.body;
+  const { service_id, status } = req.body;
 
-  if (!(name && status)) { return res.status(400).json({ error: 'Missing name or status in request body.' }); }
+  if (!(service_id && status)) { return res.status(400).json({ error: 'Missing service_id or status in request body.' }); }
 
-  const updatedService = Status_Changer(name, status);
+  const updatedService = Status_Changer(service_id, status);
 
   if (updatedService) 
   {
@@ -197,6 +199,7 @@ app.post('/api/admin/services', (req, res) => {
   if (existingService) { return res.status(409).json({ error: 'Service with this name already exists.' }); }
 
   const newService = new Service_Entry(
+    Date.now(),
     name,
     description,
     expected_duration,
@@ -227,14 +230,18 @@ app.post('/api/admin/services', (req, res) => {
 
 // PUT: Update an existing service
 app.put('/api/admin/services', (req, res) => {
+  const { service_id } = req.body;
+  if (!service_id) { return res.status(400).json({ error: 'service_id is required.' }); }
+
   const validation = validateServicePayload(req.body);
   if (!validation.valid) { return res.status(400).json({ error: validation.error }); }
 
   const { name, description, expected_duration, priority } = validation.data;
 
-  const targetService = Services_Container.find(s => s.name === name);
+  const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
   if (!targetService) { return res.status(404).json({ error: 'Service not found.' }); }
 
+  targetService.name = name;
   targetService.description = description;
   targetService.expected_duration = expected_duration;
   targetService.priority = priority;
@@ -244,11 +251,11 @@ app.put('/api/admin/services', (req, res) => {
   return res.status(200).json({ message: 'Service updated successfully', service: targetService });
 });
 
-// DELETE: Remove a service by name
-app.delete('/api/admin/services/:name', (req, res) => {
-  const serviceName = req.params.name;
+// DELETE: Remove a service by service_id
+app.delete('/api/admin/services/:id', (req, res) => {
+  const serviceId = req.params.id;
 
-  const index = Services_Container.findIndex(s => s.name === serviceName);
+  const index = Services_Container.findIndex(s => String(s.service_id) === String(serviceId));
   if (index === -1) { return res.status(404).json({ error: 'Service not found.' }); }
 
   Services_Container.splice(index, 1);
@@ -295,8 +302,8 @@ io.on('connection', (socket) => {
 
   // ADMIN ACTION: Serve next client (removes first person from array)
   socket.on('serve_client', (data) => {
-    const { service_name } = data || {};
-    const service = Services_Container.find(s => s.name === service_name);
+    const { service_id } = data || {};
+    const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
     if (service && service.Queue_Array.length > 0) 
     {
@@ -310,8 +317,8 @@ io.on('connection', (socket) => {
 
   // ADMIN ACTION: Remove specific client or first client
   socket.on('remove_client', (data) => {
-    const { service_name, client_index } = data || {};
-    const service = Services_Container.find(s => s.name === service_name);
+    const { service_id, client_index } = data || {};
+    const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
     if (service && service.Queue_Array.length > 0) 
     {
@@ -324,8 +331,8 @@ io.on('connection', (socket) => {
 
   // ADMIN ACTION: Drag & Drop Reorder
   socket.on('reorder_queue', (data) => {
-    const { service_name, updated_queue } = data || {};
-    const service = Services_Container.find(s => s.name === service_name);
+    const { service_id, updated_queue } = data || {};
+    const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
     if (service && Array.isArray(updated_queue)) 
     {
@@ -337,8 +344,8 @@ io.on('connection', (socket) => {
 
   // USER ACTION: Join Queue voluntarily
   socket.on('join_queue', (data) => {
-    const { service_name, client_name } = data || {};
-    const service = Services_Container.find(s => s.name === service_name);
+    const { service_id, client_name } = data || {};
+    const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
     if (service && client_name) 
     {
@@ -350,8 +357,8 @@ io.on('connection', (socket) => {
 
   // USER ACTION: Leave Queue voluntarily
   socket.on('leave_queue', (data) => {
-    const { service_name, client_name } = data || {};
-    const service = Services_Container.find(s => s.name === service_name);
+    const { service_id, client_name } = data || {};
+    const service = Services_Container.find(s => String(s.service_id) === String(service_id));
     if (service && client_name) 
     {
       const index = service.Queue_Array.indexOf(client_name);

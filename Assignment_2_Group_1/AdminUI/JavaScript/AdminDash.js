@@ -1,45 +1,47 @@
 // Startup
-    document.addEventListener("ServicesRendered", () => {
-        // Buttons
-        const Action_Buttons = document.querySelectorAll('#action-buttons button');
-        Action_Buttons.forEach(button => {button.addEventListener("click", Service_Status_Change)});
+document.addEventListener("ServicesRendered", (event) => {
+    // Buttons
+    const Action_Buttons = document.querySelectorAll('#action-buttons button');
+    Action_Buttons.forEach(button => {button.addEventListener("click", Service_Status_Change)});
 
-        // Service List
-        const Services = event.detail.services;
-        const Button_List = document.querySelectorAll('.scroll-list-box ul li');
+    // Service List
+    const Services = event.detail.services;
+    const Button_List = document.querySelectorAll('.scroll-list-box ul li');
 
-        Button_List.forEach((li, index) => {
-            const Button = li.querySelector('button');
+    Button_List.forEach((li, index) => {
+        const Button = li.querySelector('button');
 
-            // Require Information
-            const Queue_Length_Count = Services[index].queue_length;
-            const Status = Services[index].operation_status;
+        // Store ID attribute on element
+        Button.dataset.serviceId = Services[index].service_id;
 
-            // Modifications
-            Button.innerHTML += `<p>${Queue_Length_Count}</p><p>${Status}</p>`;
-            Button.onclick = function() {Service_Selected(Button);};
-        });
+        // Require Information
+        const Queue_Length_Count = Services[index].queue_length;
+        const Status = Services[index].operation_status;
+
+        // Modifications
+        Button.innerHTML += `<p>${Queue_Length_Count}</p><p>${Status}</p>`;
+        Button.onclick = function() { Service_Selected(Button, Services[index]); };
     });
+});
 
 // Functions
 
-function Service_Selected(Service_Button) 
+function Service_Selected(Service_Button, service) 
 {
-    // Variabels
-        // Externals
-        const SCB_Name = document.getElementById('SCB-Name');
-        const SCB_Status = document.getElementById('SCB-Status');
+    // Variables
+    const SCB_Name = document.getElementById('SCB-Name');
+    const SCB_Status = document.getElementById('SCB-Status');
 
-        // Interal
-        let Service_Details = Service_Button.querySelectorAll('p');
-        Service_Details = [...Service_Details].map(p => p.textContent.trim());
+    // Store selected service_id on container dataset
+    const SCB_Box = document.getElementById('selected-service-card') || document.body;
+    SCB_Box.dataset.selectedServiceId = service.service_id;
 
     // Modifications
-    SCB_Name.textContent = Service_Details[0];
-    SCB_Status.textContent = Service_Details[2];
+    SCB_Name.textContent = service.name;
+    SCB_Status.textContent = service.operation_status;
 }
 
-async function Operation_Status_Sender(service_name, status) 
+async function Operation_Status_Sender(service_id, status) 
 {
     try 
     {
@@ -50,7 +52,7 @@ async function Operation_Status_Sender(service_name, status)
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                name: service_name,
+                service_id: service_id,
                 status: status
             })
         });
@@ -67,32 +69,34 @@ async function Operation_Status_Sender(service_name, status)
 
 function Service_Status_Change(Action_Button) 
 {
-    // Startup Variabels
-        // Source
-        const SCB_Name = document.getElementById('SCB-Name');
-        const SCB_Status = document.getElementById('SCB-Status');
+    // Startup Variables
+    const SCB_Name = document.getElementById('SCB-Name');
+    const SCB_Status = document.getElementById('SCB-Status');
 
-        // Text
-        const Service_Name = SCB_Name.textContent;
-        const Service_Status = Action_Button.target.textContent.trim();
+    const SCB_Box = document.getElementById('selected-service-card') || document.body;
+    const Service_Id = SCB_Box.dataset.selectedServiceId;
+    const Service_Status = Action_Button.target.textContent.trim();
 
     // Checks
-    if (!(Service_Name !== "Select Service" && Service_Status !== SCB_Status.textContent.trim())) {return;}
+    if (!(Service_Id && Service_Status !== SCB_Status.textContent.trim())) { return; }
     if (Service_Status === "Deselect") 
     {
-        // Alter Modifictions
+        // Alter Modifications
         SCB_Name.textContent = "Select Service";
         SCB_Status.textContent = "NaN";
+        delete SCB_Box.dataset.selectedServiceId;
         return;
     }
 
     // Send to the Backend
-    Operation_Status_Sender(Service_Name, Service_Status);
+    Operation_Status_Sender(Service_Id, Service_Status);
     
     // Modifications
-    const Listed_Service = document.getElementById(`Button-Service-${Service_Name}`);
-    const LS_Status = Listed_Service.querySelector('p:nth-child(3)');
-    
-    LS_Status.textContent = Service_Status;
+    const Listed_Button = document.querySelector(`button[data-service-id="${Service_Id}"]`);
+    if (Listed_Button) 
+    {
+        const LS_Status = Listed_Button.querySelector('p:nth-child(3)');
+        if (LS_Status) LS_Status.textContent = Service_Status;
+    }
     SCB_Status.textContent = Service_Status;
 }

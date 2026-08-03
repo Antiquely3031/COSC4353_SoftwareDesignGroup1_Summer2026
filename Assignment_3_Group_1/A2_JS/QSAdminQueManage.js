@@ -1,9 +1,10 @@
 let socket = null;
-let currentSelectedServiceName = null;
+let currentSelectedServiceId = null;
 let globalServicesContainer = [];
 
 // Initialize Socket connection
-if (typeof io !== 'undefined') {
+if (typeof io !== 'undefined') 
+{
     socket = io('http://localhost:3000');
 
     socket.on('connect', () => {
@@ -24,12 +25,12 @@ if (typeof io !== 'undefined') {
         globalServicesContainer = services;
 
         // Re-render currently selected queue if one is open
-        if (currentSelectedServiceName) 
+        if (currentSelectedServiceId) 
         {
-            const activeService = globalServicesContainer.find(s => s.name === currentSelectedServiceName);
+            const activeService = globalServicesContainer.find(s => String(s.service_id) === String(currentSelectedServiceId));
 
-            if (activeService) {    renderQueueList(activeService);    } 
-            else {    Deselect_Queue();    }
+            if (activeService) { renderQueueList(activeService); } 
+            else { Deselect_Queue(); }
         }
     });
 } else 
@@ -39,12 +40,12 @@ if (typeof io !== 'undefined') {
 
 // Startup event binding
 document.addEventListener("ServicesRendered", (event) => {
-    if (event.detail && Array.isArray(event.detail.services)) {    globalServicesContainer = event.detail.services;    }
+    if (event.detail && Array.isArray(event.detail.services)) { globalServicesContainer = event.detail.services; }
 
     bindSidebarButtons();
 
     // Load first service if available and none selected
-    if (!currentSelectedServiceName && globalServicesContainer.length > 0) {    selectServiceByName(globalServicesContainer[0].name);    }
+    if (!currentSelectedServiceId && globalServicesContainer.length > 0) { selectServiceById(globalServicesContainer[0].service_id); }
 
     // Bind action buttons
     const Serve_Button_Serve = document.getElementById('SIAB-serve');
@@ -58,27 +59,30 @@ document.addEventListener("ServicesRendered", (event) => {
 
 function bindSidebarButtons() {
     const Button_List = document.querySelectorAll('.scroll-list-box ul li button');
-    Button_List.forEach((button) => {
+    Button_List.forEach((button, index) => {
+        if (globalServicesContainer[index]) {
+            button.dataset.serviceId = globalServicesContainer[index].service_id;
+        }
         button.onclick = () => {
-            const serviceName = button.textContent.trim();
-            selectServiceByName(serviceName);
+            const serviceId = button.dataset.serviceId;
+            selectServiceById(serviceId);
         };
     });
 }
 
-function selectServiceByName(serviceName) {
-    currentSelectedServiceName = serviceName;
-    const targetService = globalServicesContainer.find(s => s.name === serviceName);
+function selectServiceById(serviceId) {
+    currentSelectedServiceId = serviceId;
+    const targetService = globalServicesContainer.find(s => String(s.service_id) === String(serviceId));
 
     const Title_Box = document.querySelector('.SLB-Title p:nth-child(2)');
-    if (Title_Box) Title_Box.textContent = serviceName;
+    if (Title_Box) Title_Box.textContent = targetService ? targetService.name : "Select Service";
 
-    if (targetService) {    renderQueueList(targetService);    }
+    if (targetService) { renderQueueList(targetService); }
 }
 
 function Deselect_Queue() 
 {
-    currentSelectedServiceName = null;
+    currentSelectedServiceId = null;
     const Title_Box = document.querySelector('.SLB-Title p:nth-child(2)');
     if (Title_Box) Title_Box.textContent = "Select Service";
 
@@ -89,18 +93,18 @@ function Deselect_Queue()
 
 function Remove_Client() 
 {
-    if (!currentSelectedServiceName) return;
+    if (!currentSelectedServiceId) return;
 
-    if (socket && socket.connected) {    socket.emit('remove_client', { service_name: currentSelectedServiceName, client_index: 0 });    } 
-    else {    console.warn("Socket not connected to server.");    }
+    if (socket && socket.connected) { socket.emit('remove_client', { service_id: currentSelectedServiceId, client_index: 0 }); } 
+    else { console.warn("Socket not connected to server."); }
 }
 
 function Serve_Next_Client() 
 {
-    if (!currentSelectedServiceName) return;
+    if (!currentSelectedServiceId) return;
 
-    if (socket && socket.connected) {    socket.emit('serve_client', { service_name: currentSelectedServiceName });    } 
-    else {    console.warn("Socket not connected to server.");    }
+    if (socket && socket.connected) { socket.emit('serve_client', { service_id: currentSelectedServiceId }); } 
+    else { console.warn("Socket not connected to server."); }
 }
 
 function Update_Upcoming_Client() 
@@ -159,12 +163,12 @@ function Enable_Queue_Sorting(List_Element)
         draggingItem = null;
 
         // Extract updated DOM order and emit to backend over WebSockets
-        if (currentSelectedServiceName && socket && socket.connected) 
+        if (currentSelectedServiceId && socket && socket.connected) 
         {
             const updatedQueueNames = [...List_Element.querySelectorAll('.sortable-item p')].map(p => p.textContent.trim());
 
             socket.emit('reorder_queue', {
-                service_name: currentSelectedServiceName,
+                service_id: currentSelectedServiceId,
                 updated_queue: updatedQueueNames
             });
         }
