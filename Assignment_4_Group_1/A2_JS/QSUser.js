@@ -52,12 +52,14 @@ async function setupJoinQueuePage() {
 
     joinQueueForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        //8/2/2026 this conditional check will make sure user selects service before joining queue
+
+        const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+
         if (!serviceSelect.value) {
             joinQueueMessage.textContent = "Please select a service before joining a queue.";
             return;
         }
-        //the replacement of the previous hard-coded/local storage queue position
+
         try {
             const response = await fetch(`${baseAPI}/queue/join`, {
                 method: "POST",
@@ -71,10 +73,12 @@ async function setupJoinQueuePage() {
             });
 
             const data = await response.json();
+
             if (!response.ok) {
                 joinQueueMessage.textContent = data.error || "Failed to join queue.";
                 return;
             }
+
             const queueData = {
                 serviceId: data.serviceId,
                 serviceName: data.serviceName,
@@ -84,15 +88,8 @@ async function setupJoinQueuePage() {
                 joinedAt: new Date().toLocaleString()
             };
 
-            // Temporary: keep this so Dashboard and Queue Status still display correctly
-            // until we create GET /api/queue/status/:userId
             localStorage.setItem("currentQueue", JSON.stringify(queueData));
 
-            if (window.QSNotify && typeof QSNotify.queueJoined === "function") {
-                QSNotify.queueJoined(queueData.serviceName);
-            }
-
-            addHistoryRecord(queueData.serviceName, "Joined");
             joinQueueMessage.textContent =
                 `You joined the ${queueData.serviceName} queue. ` +
                 `Your position is ${queueData.position}, and your estimated wait time is ${queueData.estimatedWait} minutes.`;
@@ -104,30 +101,29 @@ async function setupJoinQueuePage() {
     });
 
     //leave queue button functionality
-    if(leaveQueueButton)
-    {
+    if (leaveQueueButton) {
         //assuming user leaves instigate queue departure 
-        leaveQueueButton.addEventListener("click", async() => {
-        try {
-            const data = await leaveQueueFromDatabase();
-            localStorage.removeItem("currentQueue");
+        leaveQueueButton.addEventListener("click", async () => {
+            try {
+                const data = await leaveQueueFromDatabase();
+                localStorage.removeItem("currentQueue");
 
-            if(window.QSNotify && typeof QSNotify.left === "function") {
-                QSNotify.left(data.serviceName);
+                if (window.QSNotify && typeof QSNotify.left === "function") {
+                    QSNotify.left(data.serviceName);
+                }
+
+                addHistoryRecord(data.serviceName, "Canceled");
+                joinQueueMessage.textContent = `Left the ${data.serviceName} queue.`;
+
+                selectedService.textContent = "None selected";
+                estimatedWait.textContent = "select Service";
+                //default value for selection
+                serviceSelect.value = "";
             }
-
-            addHistoryRecord(data.serviceName, "Canceled");
-            joinQueueMessage.textContent = "Left the ${data.serviceName} queue.";
-            
-            selectedService.textContent = "None selected";
-            estimatedWait.textContent = "select Service";
-            //default value for selection
-            serviceSelect.value = "";
-        }
-        catch(error) {
-            console.error("Error leaving queue:", error);
-            joinQueueMessage.textContent = error.message || "An error occurred while leaving the queue.";
-        }
+            catch (error) {
+                console.error("Error leaving queue:", error);
+                joinQueueMessage.textContent = error.message || "An error occurred while leaving the queue.";
+            }
         });
     }
 }
@@ -150,7 +146,7 @@ async function setupDashboardPage() {
 }
 
 //queue status page
-function setupQueueStatusPage() {
+async function setupQueueStatusPage() {
     const currentQueue = getCurrentQueue();
     const serviceName = document.getElementById("statusService");
     const queuePosition = document.getElementById("statusPosition");
@@ -159,62 +155,75 @@ function setupQueueStatusPage() {
     const statusMessage = document.getElementById("statusMessage");
     const leaveButton = document.getElementById("statusLeaveButton");
 
-    if (!currentQueue) {
+    //new implementation of queue status page this time will be connected to backend
+    try {
+        const response = await fetch(`${baseAPI}/queue/status/${userID}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+            if(statusMessage) {
+                statusMessage.innerHTML = data.error || "Unable to load queue status";
+            }
+            if (queueStatusCard) {
+                queueStatusCard.style.display = "none";
+            }
+            return;
+        }
+
+        if (statusMessage) statusMessage.innerHTML = "<em>Now in queue</em>";
+        if (serviceName) serviceName.textContent = data.serviceName;
+        if (queuePosition) queuePosition.textContent = data.position;
+        if (waitTime) waitTime.textContent = `${data.estimatedWait} minutes`;
+        if (queueStatus) queueStatus.textContent = data.status;
+
+    } 
+    catch (error) {
+        console.error("Error loading queue status:", error);
         if (statusMessage) {
-            statusMessage.textContent = "You are not currently waiting in a queue.";
+            statusMessage.textContent = "Unable to load queue status from backend.";
         }
-        return;
     }
-    if (serviceName) {
-        serviceName.textContent = currentQueue.serviceName;
-    }
-    if (queuePosition) {
-        queuePosition.textContent = currentQueue.position;
-    }
-    //improved relability in a event of the QSNotify indirectly calleds left
-    if (window.QSNotify && typeof QSNotify.positionUpdate === "function") {
-        QSNotify.positionUpdate(currentQueue.serviceName, Number(currentQueue.position));
-    }
-    if (waitTime) waitTime.textContent = `${currentQueue.estimatedWait} minutes`;
-    if (queueStatus) queueStatus.textContent = currentQueue.status;
 
-    if (statusMessage) {
-        statusMessage.textContent =
-            `You are currently waiting for ${currentQueue.serviceName}.`;
-    }
-    //leave button functionality
-    if (leaveButton) {
-    leaveButton.addEventListener("click", async () => {
-        try {
-            const data = await leaveQueueFromDatabase();
+    if (statusLeaveButton) {
+        statusLeaveButton.addEventListener("click", async () => {
+            try {
+                const response = await fetch(`${baseAPI}/queue/leave`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        userId: userID
+                    })
+                });
 
-            if (window.QSNotify && typeof QSNotify.left === "function") {
-                QSNotify.left(data.serviceName);
+                const data = await response.json();
+                if (!response.ok) {
+                    if (statusMessage) {
+                        statusMessage.textContent = data.error || "Unable to leave queue.";
+                    }
+                    return;
+                }
+
+                if (statusMessage) {
+                    statusMessage.textContent = `You have left the ${data.serviceName} queue.`;
+                }
+
+                if (queueStatusCard) {
+                    queueStatusCard.style.display = "none";
+                }
+                if (window.QSNotify && typeof QSNotify.left === "function") {
+                    QSNotify.left(data.serviceName);
+                }
+
+            } catch (error) {
+                console.error("Error leaving queue:", error);
+                if (statusMessage) {
+                    statusMessage.textContent = "Unable to connect to backend.";
+                }
             }
-
-            addHistoryRecord(data.serviceName, "Canceled");
-
-            localStorage.removeItem("currentQueue");
-
-            if (serviceName) serviceName.textContent = "No active queue";
-            if (queuePosition) queuePosition.textContent = "--";
-            if (waitTime) waitTime.textContent = "--";
-            if (queueStatus) queueStatus.textContent = "Not Joined";
-
-            if (statusMessage) {
-                statusMessage.textContent =
-                    `You have left the ${data.serviceName} queue.`;
-            }
-
-        } catch (error) {
-            console.error("Error leaving queue:", error);
-
-            if (statusMessage) {
-                statusMessage.textContent = error.message;
-            }
-        }
-    });
-}
+        });
+    }
 }
 
 //queue history page
@@ -366,6 +375,7 @@ async function loadServicesDropdown() {
         }
 
         const services = await response.json();
+
         serviceSelect.innerHTML = `<option value="">Select a service</option>`;
         services.forEach(service => {
             const option = document.createElement("option");
@@ -422,12 +432,10 @@ async function leaveQueueFromDatabase() {
             userId: userID
         })
     });
-
     const data = await response.json();
 
     if (!response.ok) {
         throw new Error(data.error || "Failed to leave queue.");
     }
-
     return data;
 }
