@@ -99,6 +99,57 @@ app.post("/api/queue/join", async (req, res) => {
         });
     }
 });
+
+//leave queue endpoint
+app.post("/api/queue/leave", async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({
+                error: "Missing userId"
+            });
+        }
+
+        const [activeRows] = await db.query(
+            `SELECT qe.queue_entry_id, qe.queue_id, qe.user_id, qe.position, s.service_name
+             FROM QueueEntry qe
+             JOIN \`Queue\` q ON qe.queue_id = q.queue_id
+             JOIN Service s ON q.service_id = s.service_id
+             WHERE qe.user_id = ? AND qe.status = 'waiting'
+             LIMIT 1`,
+            [userId]
+        );
+
+        if (activeRows.length === 0) {
+            return res.status(404).json({
+                error: "User is not currently waiting in a queue"
+            });
+        }
+
+        const activeEntry = activeRows[0];
+
+        await db.query(
+            `UPDATE QueueEntry
+             SET status = 'canceled'
+             WHERE queue_entry_id = ?`,
+            [activeEntry.queue_entry_id]
+        );
+
+        res.json({
+            message: "User left queue successfully",
+            serviceName: activeEntry.service_name,
+            status: "Canceled"
+        });
+
+    } catch (error) {
+        console.error("Error leaving queue:", error);
+
+        res.status(500).json({
+            error: "Failed to leave queue"
+        });
+    }
+});
 const PORT = process.env.PORT || 3000;
 //Connection testing, if this appears we have a successful commection
 app.listen(PORT, () => {

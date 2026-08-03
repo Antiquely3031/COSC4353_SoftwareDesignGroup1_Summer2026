@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset = "UTF-8">
+        <meta name = "viewport" content = "width=device-width, initial-scale=1.0">
+        <title>Queue Status></title>
+
+        <!--Shared user styling-->
+        <link rel="stylesheet" href="../A2_CSS/QSUserDashboard.css">
+        <!--Styling dedicated to this page-->
+        <link rel="stylesheet" href="../A2_CSS/QSQueueStatus.css">
+    </head>
+
+    <body>
+        <header class = "top-header">
+            <div class="logo-area">
+                <img src="../QueueSmartLogo.png" alt="QueueSmart logo" class="logo">
+            </div>
+
+            <h1>QueueSmart</h1>
+            <p>Queue Status</p>
+        </header>
+
+        <nav class="navbar">
+            <a href="QSUserDashboard.html">Dashboard</a>
+            <a href="QSJoinQueue.html">Join Queue</a>
+            <a href="QSQueueStatus.html">Queue Status</a>
+            <a href="QSQueueHistory.html">History</a>
+            <a href="QSLoginScreen.html">Logout</a>
+        </nav>
+
+        <main class="dashboard-container" id="queueStatusPage">
+
+            <section class="card">
+                <h2>Queue Status</h2>
+                <p id="statusMessage"><em>Now in queue</em></p>
+            </section>
+
+             <section class="card queue-status-card">
+
+            <h2 id="statusService">Welfare Check</h2>
+
+            <div class="status-information">
+
+                <div class="status-item">
+                    <span class="status-label">
+                        Current Position:
+                    </span>
+
+                    <span class="status-value" id="statusPosition">
+                        12
+                    </span>
+                </div>
+
+
+                <div class="status-item">
+                    <span class="status-label">
+                        Estimated Wait Time:
+                    </span>
+
+                    <span class="status-value" id="statusWaitTime">
+                        46 minutes
+                    </span>
+                </div>
+
+
+                <div class="status-item">
+                    <span class="status-label">
+                        Current Status:
+                    </span>
+
+                    <span class="status-badge" id="statusCurrent">
+                        Waiting
+                    </span>
+                </div>
+
+            </div>
+            <div class="queue-actions">
+                <button type="button" id="statusLeaveButton" class="leave-queue-button">Leave Queue</button>
+            </div>
+
+        </section>
+        </main>
+
+        <script src="../A2_JS/QSNotifications.js"></script>
+        <script src="../A2_JS/QSUser.js"></script>
+    </body>
+</html>
