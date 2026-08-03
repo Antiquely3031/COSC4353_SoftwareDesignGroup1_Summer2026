@@ -244,6 +244,13 @@ async function setupJoinQueuePage() {
         // joinQueueMessage.textContent =
         //     `You joined the ${queueData.serviceName} queue. ` +
         //     `Your position is ${queueData.position}, and your estimated wait time is ${queueData.estimatedWait} minutes.`;
+        
+        //8/2/2026 this condition is used to check if user selects service before joining queue
+        if (!serviceSelect.value) {
+            joinQueueMessage.textContent = "Please select a service before joining a queue.";
+            return;
+        }
+        //the replacement of the previous hard-coded/local storage queue position
         try {
             const response = await fetch(`${baseAPI}/queue/join`, {
                 method: "POST",
@@ -257,12 +264,10 @@ async function setupJoinQueuePage() {
             });
 
             const data = await response.json();
-
             if (!response.ok) {
                 joinQueueMessage.textContent = data.error || "Failed to join queue.";
                 return;
             }
-
             const queueData = {
                 serviceId: data.serviceId,
                 serviceName: data.serviceName,
@@ -281,7 +286,6 @@ async function setupJoinQueuePage() {
             }
 
             addHistoryRecord(queueData.serviceName, "Joined");
-
             joinQueueMessage.textContent =
                 `You joined the ${queueData.serviceName} queue. ` +
                 `Your position is ${queueData.position}, and your estimated wait time is ${queueData.estimatedWait} minutes.`;
