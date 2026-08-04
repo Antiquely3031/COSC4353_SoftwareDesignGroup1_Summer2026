@@ -19,10 +19,12 @@ const server = http.createServer(app);
 // Attach WebSockets to the HTTP server
 const io = new Server(server, { cors: { origin: "*" } });
 
-class Service_Entry {
+class Service_Entry 
+{
   Queue_Array = [];
 
-  constructor(service_id, name, description, expected_duration, priority, queue_length, operation_status, queue_array = []) {
+  constructor(service_id, name, description, expected_duration, priority = 'Medium', queue_length = 0, operation_status = 'open', queue_array = []) 
+  {
     this.service_id = service_id;
     this.name = name;
     this.priority = priority;
@@ -34,7 +36,29 @@ class Service_Entry {
   }
 }
 
-function sortServicesByPriority(services) {  return services.sort((a, b) => b.priority - a.priority);  }
+function priorityToNumeric(priority) 
+{
+  if (typeof priority === 'number') {  return priority;  }
+  const lowerPrio = String(priority).toLowerCase().trim();
+  switch (lowerPrio) 
+  {
+    case 'high': case '3': return 3;
+    case 'medium': case '2': return 2;
+    case 'low': case '1': default: return 1;
+  }
+}
+
+function sortServicesByPriority(services) 
+{  
+  return services.sort((a, b) => priorityToNumeric(b.priority) - priorityToNumeric(a.priority));  
+}
+
+function normalizeStatus(status) 
+{
+  const lower = String(status).toLowerCase().trim();
+  if (lower === 'close' || lower === 'closed') {  return 'closed';  }
+  return 'open';
+}
 
 async function Container_Initializer() 
 {
@@ -63,9 +87,9 @@ async function Container_Initializer()
         row.name,
         row.description,
         Number(row.expected_duration),
-        Number(row.priority),
+        row.priority || 'Medium',
         Number(row.queue_length),
-        row.operation_status,
+        normalizeStatus(row.operation_status || 'open'),
         parsedQueue
       );
     });
@@ -98,10 +122,6 @@ function validateServicePayload(payload)
   {
     return { valid: false, error: 'Expected Duration is required.' };
   }
-  if (priority === undefined || priority === null || String(priority).trim() === '') 
-  {
-    return { valid: false, error: 'Priority Level is required.' };
-  }
 
   // String Length Limit Check
   const nameStr = String(name).trim();
@@ -118,26 +138,17 @@ function validateServicePayload(payload)
   }
 
   // Priority Level Field Verification (low / medium / high or numeric 1 / 2 / 3)
-  let parsedPriority;
-  switch (typeof priority) 
+  let parsedPriority = 'Medium';
+  if (priority !== undefined && priority !== null && String(priority).trim() !== '') 
   {
-    case 'string':
-      const lowerPrio = priority.toLowerCase().trim();
-
-      switch (lowerPrio) 
-      {
-        case 'low': case '1': parsedPriority = 1; break;
-        case 'medium': case '2': parsedPriority = 2; break;
-        case 'high': case '3': parsedPriority = 3; break;
-        default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
-      }
-      break;
-    case 'number':
-      if (!([1, 2, 3].includes(priority))) { return { valid: false, error: 'Priority Level must be 1 (low), 2 (medium), or 3 (high).' }; }
-
-      parsedPriority = priority;
-      break;
-    default: return { valid: false, error: 'Invalid Priority Level format.' };
+    const lowerPrio = String(priority).toLowerCase().trim();
+    switch (lowerPrio) 
+    {
+      case 'low': case '1': parsedPriority = 'Low'; break;
+      case 'medium': case '2': parsedPriority = 'Medium'; break;
+      case 'high': case '3': parsedPriority = 'High'; break;
+      default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
+    }
   }
 
   return {
@@ -152,18 +163,21 @@ function validateServicePayload(payload)
 }
 
 // Functions for Dashboard
-function Status_Changer(service_id, new_status) 
+async function Status_Changer(service_id, new_status) 
 {
   const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
 
   if (!targetService) { return null; }
 
-  targetService.operation_status = new_status;
+  const formattedStatus = normalizeStatus(new_status);
+
+  await pool.query('CALL Service_Status_UPDATE(?, ?);', [service_id, formattedStatus]);
+  targetService.operation_status = formattedStatus;
   return targetService;
 }
 
 // Express Route to handle status changes
-app.patch('/api/admin/services/status', (req, res) => {
+app.patch('/api/admin/services/status', async (req, res) => {
   const { service_id, status } = req.body;
 
   if (!(service_id && status)) 
@@ -171,25 +185,31 @@ app.patch('/api/admin/services/status', (req, res) => {
     return res.status(400).json({ error: 'Missing service_id or status in request body.' });
   }
 
-  const updatedService = Status_Changer(service_id, status);
-
-  if (updatedService) 
+  try 
   {
-    // Broadcast real-time update to all connected WebSocket clients
-    io.emit('queue_updated', Services_Container);
+    const updatedService = await Status_Changer(service_id, status);
 
-    return res.status(200).json({
-      message: 'Status updated successfully',
-      service: updatedService
-    });
+    if (updatedService) 
+    {
+      // Broadcast real-time update to all connected WebSocket clients
+      io.emit('queue_updated', Services_Container);
+
+      return res.status(200).json({
+        message: 'Status updated successfully',
+        service: updatedService
+      });
+    }
+
+    return res.status(404).json({ error: 'Service not found.' });
+  } catch (error) 
+  {
+    return res.status(500).json({ error: error.message });
   }
-
-  return res.status(404).json({ error: 'Service not found.' });
 });
 
 // Functions and Functionality for Service Management
 // POST: Create a new service
-app.post('/api/admin/services', (req, res) => {
+app.post('/api/admin/services', async (req, res) => {
   const validation = validateServicePayload(req.body);
   if (!validation.valid) { return res.status(400).json({ error: validation.error }); }
 
@@ -198,38 +218,43 @@ app.post('/api/admin/services', (req, res) => {
   const existingService = Services_Container.find(s => s.name === name);
   if (existingService) { return res.status(409).json({ error: 'Service with this name already exists.' }); }
 
-  const newService = new Service_Entry(
-    Date.now(),
-    name,
-    description,
-    expected_duration,
-    priority,
-    0,
-    'clopen'
-  );
-
-  // Find insertion index: Place at the end of the range for equal priority
-  // Find the index of the first service with a STRICTLY LOWER priority
-  let insertIndex = Services_Container.findIndex(s => s.priority < priority);
-
-  if (insertIndex === -1) 
+  try 
   {
-    // If no service has lower priority, push to the end of the array
-    Services_Container.push(newService);
-  } else 
+    const [rows] = await pool.query('CALL INSERT_Service(?, ?, ?, ?);', [name, description, expected_duration, priority]);
+    const generatedId = rows[0][0].generated_id;
+
+    const newService = new Service_Entry(
+      generatedId,
+      name,
+      description,
+      expected_duration,
+      priority,
+      0,
+      'open'
+    );
+
+    let insertIndex = Services_Container.findIndex(s => priorityToNumeric(s.priority) < priorityToNumeric(priority));
+
+    if (insertIndex === -1) 
+    {
+      Services_Container.push(newService);
+    } else 
+    {
+      Services_Container.splice(insertIndex, 0, newService);
+    }
+
+    // Broadcast updated container over WebSockets
+    io.emit('queue_updated', Services_Container);
+
+    return res.status(201).json({ message: 'Service created successfully', service: newService });
+  } catch (error) 
   {
-    // Insert right before the first lower-priority element
-    Services_Container.splice(insertIndex, 0, newService);
+    return res.status(500).json({ error: error.message });
   }
-
-  // Broadcast updated container over WebSockets
-  io.emit('queue_updated', Services_Container);
-
-  return res.status(201).json({ message: 'Service created successfully', service: newService });
 });
 
 // PUT: Update an existing service
-app.put('/api/admin/services', (req, res) => {
+app.put('/api/admin/services', async (req, res) => {
   const { service_id } = req.body;
   if (!service_id) { return res.status(400).json({ error: 'service_id is required.' }); }
 
@@ -241,28 +266,46 @@ app.put('/api/admin/services', (req, res) => {
   const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
   if (!targetService) { return res.status(404).json({ error: 'Service not found.' }); }
 
-  targetService.name = name;
-  targetService.description = description;
-  targetService.expected_duration = expected_duration;
-  targetService.priority = priority;
+  try 
+  {
+    await pool.query('CALL UPDATE_Service(?, ?, ?, ?, ?);', [service_id, name, description, expected_duration, priority]);
 
-  io.emit('queue_updated', Services_Container);
+    targetService.name = name;
+    targetService.description = description;
+    targetService.expected_duration = expected_duration;
+    targetService.priority = priority;
 
-  return res.status(200).json({ message: 'Service updated successfully', service: targetService });
+    Services_Container = sortServicesByPriority(Services_Container);
+
+    io.emit('queue_updated', Services_Container);
+
+    return res.status(200).json({ message: 'Service updated successfully', service: targetService });
+  } catch (error) 
+  {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 // DELETE: Remove a service by service_id
-app.delete('/api/admin/services/:id', (req, res) => {
+app.delete('/api/admin/services/:id', async (req, res) => {
   const serviceId = req.params.id;
 
   const index = Services_Container.findIndex(s => String(s.service_id) === String(serviceId));
   if (index === -1) { return res.status(404).json({ error: 'Service not found.' }); }
 
-  Services_Container.splice(index, 1);
+  try 
+  {
+    await pool.query('CALL DELETE_Service(?);', [serviceId]);
 
-  io.emit('queue_updated', Services_Container);
+    Services_Container.splice(index, 1);
 
-  return res.status(200).json({ message: 'Service deleted successfully' });
+    io.emit('queue_updated', Services_Container);
+
+    return res.status(200).json({ message: 'Service deleted successfully' });
+  } catch (error) 
+  {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 // Express Route
@@ -374,7 +417,8 @@ io.on('connection', (socket) => {
 });
 
 // Function to start the server programmatically
-async function startServer(port = 3000) {
+async function startServer(port = 3000) 
+{
   Services_Container = await Container_Initializer();
   return server.listen(port, () => {
     console.log(`AdminBackend (HTTP + WebSockets) listening on port ${port}`);

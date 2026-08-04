@@ -96,7 +96,7 @@ function Service_Status_Change(Action_Button)
     if (Listed_Button) 
     {
         const LS_Status = Listed_Button.querySelector('p:nth-child(3)');
-        if (LS_Status) LS_Status.textContent = Service_Status;
+        if (LS_Status) LS_Status.textContent = Service_Status.toLowerCase();
     }
-    SCB_Status.textContent = Service_Status;
+    SCB_Status.textContent = Service_Status.toLowerCase();
 }

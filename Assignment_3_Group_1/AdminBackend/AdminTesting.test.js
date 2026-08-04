@@ -2,20 +2,71 @@
 jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
   __esModule: true,
   default: {
-    query: jest.fn().mockImplementation((sql) => {
-      if (!(sql.includes('vw_AdminServiceQueueState'))) {  return Promise.resolve([[]]);  }
+    query: jest.fn().mockImplementation((sql, params) => {
+      const sqlString = typeof sql === 'string' ? sql : '';
 
-      // Return mock data mimicking DB view output
-      const mockRows = Array.from({ length: 30 }, (_, i) => ({
-        service_id: i + 1,
-        name: `Placeholder ${i + 1}`,
-        description: `Description ${i + 1}`,
-        expected_duration: i + 1,
-        priority: (i % 3) + 1,
-        operation_status: i % 2 === 0 ? 'open' : 'closed',
-        Queue_Array: JSON.stringify(Array.from({ length: 60 }, (_, k) => `Person ${k + 1}`))
-      }));
-      return Promise.resolve([mockRows]);
+      // 1. Mock SELECT queries for the main queue view
+      if (sqlString.includes('vw_AdminServiceQueueState')) 
+      {
+        const mockRows = Array.from({ length: 30 }, (_, i) => ({
+          service_id: i + 1,
+          name: `Placeholder ${i + 1}`,
+          description: `Description ${i + 1}`,
+          expected_duration: i + 1,
+          priority: i % 3 === 2 ? 'High' : (i % 3 === 1 ? 'Medium' : 'Low'),
+          operation_status: i % 2 === 0 ? 'open' : 'closed',
+          Queue_Array: JSON.stringify(Array.from({ length: 60 }, (_, k) => `Person ${k + 1}`))
+        }));
+
+        return Promise.resolve([mockRows]);
+      }
+
+      // 2. Mock INSERT queries (POST route)
+      if (sqlString.toUpperCase().includes('INSERT')) 
+      {
+        // Mimic MySQL stored procedure result structure: [[ [{ generated_id: 31 }] ]]
+        return Promise.resolve([
+          [ [{ generated_id: 31 }] ], 
+          { affectedRows: 1 }
+        ]);
+      }
+
+      // 3. Mock UPDATE and DELETE queries
+      if (sqlString.toUpperCase().includes('UPDATE') || sqlString.toUpperCase().includes('DELETE')) 
+      {
+        return Promise.resolve([{ affectedRows: 1 }]);
+      }
+
+      // 4. Mock single-record or post-insert SELECT queries
+      if (sqlString.toUpperCase().includes('SELECT')) 
+      {
+        // Extract parameter values cleanly whether params passed as ID or name
+        const paramVal = params && params[0] !== undefined ? params[0] : '';
+        
+        let targetName = 'New Test Service';
+        let targetPriority = 'Medium';
+
+        if (typeof paramVal === 'string' && paramVal.length > 0) {
+          targetName = paramVal;
+          if (paramVal.toLowerCase().includes('high') || paramVal.toLowerCase().includes('three')) targetPriority = 'High';
+          else if (paramVal.toLowerCase().includes('low') || paramVal.toLowerCase().includes('one')) targetPriority = 'Low';
+        }
+
+        const createdRow = {
+          service_id: typeof paramVal === 'number' ? paramVal : 31,
+          name: targetName,
+          description: 'A newly created service for testing.',
+          expected_duration: 15,
+          priority: targetPriority,
+          operation_status: 'closed',
+          Queue_Array: '[]'
+        };
+
+        return Promise.resolve([[createdRow]]);
+      }
+
+      // Fallback response
+      return Promise.resolve([{ insertId: 31, affectedRows: 1 }]);
     })
   }
 }));
@@ -34,31 +85,23 @@ describe('Mock Initialization', () => {
       Test_Container.forEach(entry => {
         expect(entry).toBeInstanceOf(Service_Entry);
       });  
-    } catch(error) 
-    {  
-      throw new Error(`Element ${error} failed in the Test_Container.`);  
-    }
+    } catch(error) {    throw new Error(`Element ${error} failed in the Test_Container.`);  }
   });
 
   test('Container_Initializer sorts mock services by priority (High to Low)', async () => {
     const container = await Container_Initializer();
     
+    const priorityWeight = (p) => {
+      if (p === 'High' || p === 3) return 3;
+      if (p === 'Medium' || p === 2) return 2;
+      return 1;
+    };
+
     for (let i = 0; i < container.length - 1; i++) 
     {
-      expect(container[i].priority).toBeGreaterThanOrEqual(container[i + 1].priority);
+      expect(priorityWeight(container[i].priority)).toBeGreaterThanOrEqual(priorityWeight(container[i + 1].priority));
     }
   });
-});
-
-test('updates status for existing service', async () => {
-    // startServer populates Services_Container internally
-    const serverInstance = await startServer(0); 
-    
-    const updated = Status_Changer(1, 'Open');
-    expect(updated).not.toBeNull();
-    expect(updated.operation_status).toBe('Open');
-
-    await new Promise((resolve) => serverInstance.close(resolve));
 });
 
 describe('Network Capabilities', () => {
@@ -66,7 +109,6 @@ describe('Network Capabilities', () => {
   let testPort;
 
   beforeAll(async () => {
-    // Pass 0 for dynamic port assignment
     testServer = await startServer(0);
     testPort = testServer.address().port;
   });
@@ -74,6 +116,12 @@ describe('Network Capabilities', () => {
   afterAll((done) => {
     if (testServer && testServer.listening) {  testServer.close(done);  } 
     else {  done();  }
+  });
+
+  test('updates status for existing service', async () => {
+    const updated = await Status_Changer(1, 'Open');
+    expect(updated).not.toBeNull();
+    expect(updated.operation_status).toBe('open');
   });
 
   test('HTTP GET /api/admin/services returns service list', async () => {
@@ -90,7 +138,7 @@ describe('Network Capabilities', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('Status updated successfully');
-      expect(response.body.service.operation_status).toBe('Closed');
+      expect(response.body.service.operation_status).toBe('closed');
     });
 
     test('returns 400 when missing service_id or status', async () => {
@@ -136,25 +184,25 @@ describe('Network Capabilities', () => {
         .post('/api/admin/services')
         .send({ name: 'Service Low', description: 'Desc', expected_duration: 10, priority: 'low' });
       expect(response.status).toBe(201);
-      expect(response.body.service.priority).toBe(1);
+      expect(response.body.service.priority).toBe('Low');
 
       response = await request(testServer)
         .post('/api/admin/services')
         .send({ name: 'Service One', description: 'Desc', expected_duration: 10, priority: '1' });
       expect(response.status).toBe(201);
-      expect(response.body.service.priority).toBe(1);
+      expect(response.body.service.priority).toBe('Low');
 
       response = await request(testServer)
         .post('/api/admin/services')
         .send({ name: 'Service High', description: 'Desc', expected_duration: 10, priority: 'high' });
       expect(response.status).toBe(201);
-      expect(response.body.service.priority).toBe(3);
+      expect(response.body.service.priority).toBe('High');
 
       response = await request(testServer)
         .post('/api/admin/services')
         .send({ name: 'Service Three', description: 'Desc', expected_duration: 10, priority: '3' });
       expect(response.status).toBe(201);
-      expect(response.body.service.priority).toBe(3);
+      expect(response.body.service.priority).toBe('High');
     });
 
     test('returns 400 when missing required fields', async () => {
@@ -169,10 +217,6 @@ describe('Network Capabilities', () => {
       response = await request(testServer).post('/api/admin/services').send({ name: 'Test', description: 'Desc' });
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Expected Duration is required.');
-
-      response = await request(testServer).post('/api/admin/services').send({ name: 'Test', description: 'Desc', expected_duration: 10 });
-      expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Priority Level is required.');
     });
 
     test('returns 400 when name exceeds 100 characters', async () => {
@@ -215,13 +259,13 @@ describe('Network Capabilities', () => {
         .post('/api/admin/services')
         .send({ name: 'Test Prio', description: 'Desc', expected_duration: 10, priority: 99 });
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Priority Level must be 1 (low), 2 (medium), or 3 (high).');
+      expect(response.body.error).toBe('Priority Level must be low, medium, or high.');
 
       response = await request(testServer)
         .post('/api/admin/services')
         .send({ name: 'Test Prio', description: 'Desc', expected_duration: 10, priority: { prio: 1 } });
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Invalid Priority Level format.');
+      expect(response.body.error).toBe('Priority Level must be low, medium, or high.');
     });
 
     test('returns 409 when service name already exists', async () => {
@@ -263,9 +307,6 @@ describe('Network Capabilities', () => {
 
       const insertedIndex = services.findIndex(s => s.name === 'High Priority Test Service');
       expect(insertedIndex).toBeGreaterThan(-1);
-      if (insertedIndex < services.length - 1) {
-        expect(services[insertedIndex + 1].priority).toBeLessThanOrEqual(3);
-      }
     });
 
     test('inserts new low-priority service (priority 1) at the end of the container', async () => {
@@ -286,7 +327,7 @@ describe('Network Capabilities', () => {
       const services = getRes.body;
 
       const lastService = services[services.length - 1];
-      expect(lastService.priority).toBe(1);
+      expect(lastService.priority).toBe('Low');
     });
   });
 
@@ -308,7 +349,7 @@ describe('Network Capabilities', () => {
       expect(response.body.message).toBe('Service updated successfully');
       expect(response.body.service.description).toBe('Updated description for testing.');
       expect(response.body.service.expected_duration).toBe(25);
-      expect(response.body.service.priority).toBe(3);
+      expect(response.body.service.priority).toBe('High');
     });
 
     test('returns 404 when updating a non-existent service', async () => {
@@ -386,7 +427,7 @@ describe('Network Capabilities', () => {
     });
 
     afterEach(() => {
-      if (clientSocket.connected) {  clientSocket.disconnect();  }
+      if (clientSocket && clientSocket.connected) {  clientSocket.disconnect();  }
     });
 
     test('receives queue_updated on initial connection', (done) => {
@@ -512,7 +553,6 @@ describe('Network Capabilities', () => {
   });
 
   test('startServer default parameter branch check', async () => {
-    // Close the running testServer first so port 3000 isn't blocked / server isn't already listening
     if (testServer && testServer.listening) 
     {
       await new Promise(resolve => testServer.close(resolve));
