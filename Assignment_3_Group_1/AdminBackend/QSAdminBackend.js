@@ -34,16 +34,15 @@ class Service_Entry {
   }
 }
 
-function sortServicesByPriority(services) 
-{
-  return services.sort((a, b) => b.priority - a.priority);
-}
+function sortServicesByPriority(services) {  return services.sort((a, b) => b.priority - a.priority);  }
 
 async function Container_Initializer() 
 {
-  try {
+  try 
+  {
     // Execute stored procedure transaction to generate baseline dataset
-    await pool.query('CALL Mock_Initialization_Generation(30);');
+    const Initial_Gen_Reset_Key = false;
+    if (Initial_Gen_Reset_Key)  {  await pool.query('CALL Mock_Initialization_Generation(30);');  }
 
     // Query aggregated service-queue view
     const [rows] = await pool.query('SELECT * FROM vw_AdminServiceQueueState;');
@@ -54,10 +53,7 @@ async function Container_Initializer()
       if (typeof row.Queue_Array === 'string') 
       {
         try { parsedQueue = JSON.parse(row.Queue_Array); } catch (e) { parsedQueue = []; }
-      } else if (Array.isArray(row.Queue_Array)) 
-      {
-        parsedQueue = row.Queue_Array;
-      }
+      } else if (Array.isArray(row.Queue_Array))  {  parsedQueue = row.Queue_Array;  }
 
       // Filter nulls produced by outer joins when queues are empty
       parsedQueue = parsedQueue.filter(item => item !== null);
@@ -75,7 +71,8 @@ async function Container_Initializer()
     });
 
     return sortServicesByPriority(Container);
-  } catch (error) {
+  } catch (error) 
+  {
     console.error('Error executing DB initialization procedure or querying view:', error.message);
     return [];
   }
@@ -169,7 +166,10 @@ function Status_Changer(service_id, new_status)
 app.patch('/api/admin/services/status', (req, res) => {
   const { service_id, status } = req.body;
 
-  if (!(service_id && status)) { return res.status(400).json({ error: 'Missing service_id or status in request body.' }); }
+  if (!(service_id && status)) 
+  {
+    return res.status(400).json({ error: 'Missing service_id or status in request body.' });
+  }
 
   const updatedService = Status_Changer(service_id, status);
 
@@ -280,7 +280,7 @@ function notifyServed(servedClient, serviceName) {
   const userId = (servedClient && typeof servedClient === 'object')
     ? servedClient.userId
     : servedClient;
-  if (userId === undefined || userId === null) { return; }
+  if (!(userId !== undefined && userId !== null)) { return; }
 
   fetch('http://localhost:3001/api/notifications/served', {
     method: 'POST',

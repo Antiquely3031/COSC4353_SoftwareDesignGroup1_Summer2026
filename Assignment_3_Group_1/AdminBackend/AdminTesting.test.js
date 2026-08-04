@@ -3,20 +3,19 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
   __esModule: true,
   default: {
     query: jest.fn().mockImplementation((sql) => {
-      if (sql.includes('vw_AdminServiceQueueState')) {
-        // Return mock data mimicking DB view output
-        const mockRows = Array.from({ length: 30 }, (_, i) => ({
-          service_id: i + 1,
-          name: `Placeholder ${i + 1}`,
-          description: `Description ${i + 1}`,
-          expected_duration: i + 1,
-          priority: (i % 3) + 1,
-          operation_status: i % 2 === 0 ? 'open' : 'closed',
-          Queue_Array: JSON.stringify(Array.from({ length: 60 }, (_, k) => `Person ${k + 1}`))
-        }));
-        return Promise.resolve([mockRows]);
-      }
-      return Promise.resolve([[]]);
+      if (!(sql.includes('vw_AdminServiceQueueState'))) {  return Promise.resolve([[]]);  }
+
+      // Return mock data mimicking DB view output
+      const mockRows = Array.from({ length: 30 }, (_, i) => ({
+        service_id: i + 1,
+        name: `Placeholder ${i + 1}`,
+        description: `Description ${i + 1}`,
+        expected_duration: i + 1,
+        priority: (i % 3) + 1,
+        operation_status: i % 2 === 0 ? 'open' : 'closed',
+        Queue_Array: JSON.stringify(Array.from({ length: 60 }, (_, k) => `Person ${k + 1}`))
+      }));
+      return Promise.resolve([mockRows]);
     })
   }
 }));
@@ -30,11 +29,13 @@ describe('Mock Initialization', () => {
     const Test_Container = await Container_Initializer();
     expect(Test_Container).toBeDefined();
     
-    try { 
+    try 
+    { 
       Test_Container.forEach(entry => {
         expect(entry).toBeInstanceOf(Service_Entry);
       });  
-    } catch(error) {  
+    } catch(error) 
+    {  
       throw new Error(`Element ${error} failed in the Test_Container.`);  
     }
   });
@@ -42,7 +43,8 @@ describe('Mock Initialization', () => {
   test('Container_Initializer sorts mock services by priority (High to Low)', async () => {
     const container = await Container_Initializer();
     
-    for (let i = 0; i < container.length - 1; i++) {
+    for (let i = 0; i < container.length - 1; i++) 
+    {
       expect(container[i].priority).toBeGreaterThanOrEqual(container[i + 1].priority);
     }
   });
@@ -70,11 +72,8 @@ describe('Network Capabilities', () => {
   });
 
   afterAll((done) => {
-    if (testServer && testServer.listening) {
-      testServer.close(done);
-    } else {
-      done();
-    }
+    if (testServer && testServer.listening) {  testServer.close(done);  } 
+    else {  done();  }
   });
 
   test('HTTP GET /api/admin/services returns service list', async () => {
@@ -387,9 +386,7 @@ describe('Network Capabilities', () => {
     });
 
     afterEach(() => {
-      if (clientSocket.connected) {
-        clientSocket.disconnect();
-      }
+      if (clientSocket.connected) {  clientSocket.disconnect();  }
     });
 
     test('receives queue_updated on initial connection', (done) => {
@@ -516,7 +513,8 @@ describe('Network Capabilities', () => {
 
   test('startServer default parameter branch check', async () => {
     // Close the running testServer first so port 3000 isn't blocked / server isn't already listening
-    if (testServer && testServer.listening) {
+    if (testServer && testServer.listening) 
+    {
       await new Promise(resolve => testServer.close(resolve));
     }
 
