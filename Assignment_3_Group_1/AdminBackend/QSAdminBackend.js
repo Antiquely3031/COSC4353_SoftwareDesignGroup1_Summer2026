@@ -5,7 +5,7 @@
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
-const { Server } = require('socket.io'); // or standard 'ws'
+const { Server } = require('socket.io');
 
 const pool = require('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool').default;
 
@@ -23,7 +23,7 @@ class Service_Entry
 {
   Queue_Array = [];
 
-  constructor(service_id, name, description, expected_duration, priority = 'Medium', queue_length = 0, operation_status = 'open', queue_array = []) 
+  constructor(service_id, name, description, expected_duration, priority = 2, queue_length = 0, operation_status = 'open', queue_array = []) 
   {
     this.service_id = service_id;
     this.name = name;
@@ -36,27 +36,12 @@ class Service_Entry
   }
 }
 
-function priorityToNumeric(priority) 
-{
-  if (typeof priority === 'number') {  return priority;  }
-  const lowerPrio = String(priority).toLowerCase().trim();
-  switch (lowerPrio) 
-  {
-    case 'high': case '3': return 3;
-    case 'medium': case '2': return 2;
-    case 'low': case '1': default: return 1;
-  }
-}
-
-function sortServicesByPriority(services) 
-{  
-  return services.sort((a, b) => priorityToNumeric(b.priority) - priorityToNumeric(a.priority));  
-}
+function sortServicesByPriority(services) {  return services.sort((a, b) => b.priority - a.priority);  }
 
 function normalizeStatus(status) 
 {
   const lower = String(status).toLowerCase().trim();
-  if (lower === 'close' || lower === 'closed') {  return 'closed';  }
+  if (lower === 'close' || lower === 'closed') return 'closed';
   return 'open';
 }
 
@@ -64,38 +49,38 @@ async function Container_Initializer()
 {
   try 
   {
-    // Execute stored procedure transaction to generate baseline dataset
     const Initial_Gen_Reset_Key = false;
-    if (Initial_Gen_Reset_Key)  {  await pool.query('CALL Mock_Initialization_Generation(30);');  }
+    if (Initial_Gen_Reset_Key) await pool.query('CALL Mock_Initialization_Generation(30);');
 
-    // Query aggregated service-queue view
     const [rows] = await pool.query('SELECT * FROM vw_AdminServiceQueueState;');
 
-    const Container = rows.map(row => {
-      // Parse JSON array emitted by DB view
+    const Container = rows.map(row => 
+    {
       let parsedQueue = [];
       if (typeof row.Queue_Array === 'string') 
       {
-        try { parsedQueue = JSON.parse(row.Queue_Array); } catch (e) { parsedQueue = []; }
-      } else if (Array.isArray(row.Queue_Array))  {  parsedQueue = row.Queue_Array;  }
+          try { parsedQueue = JSON.parse(row.Queue_Array); } 
+          catch (e) { parsedQueue = []; }
+      } 
+      else if (Array.isArray(row.Queue_Array)) parsedQueue = row.Queue_Array;
 
-      // Filter nulls produced by outer joins when queues are empty
       parsedQueue = parsedQueue.filter(item => item !== null);
 
       return new Service_Entry(
-        row.service_id,
-        row.name,
-        row.description,
-        Number(row.expected_duration),
-        row.priority || 'Medium',
-        Number(row.queue_length),
-        normalizeStatus(row.operation_status || 'open'),
-        parsedQueue
+          row.service_id,
+          row.name,
+          row.description,
+          Number(row.expected_duration),
+          Number(row.priority) || 2,
+          Number(row.queue_length),
+          normalizeStatus(row.operation_status || 'open'),
+          parsedQueue
       );
     });
 
     return sortServicesByPriority(Container);
-  } catch (error) 
+  } 
+  catch (error) 
   {
     console.error('Error executing DB initialization procedure or querying view:', error.message);
     return [];
@@ -104,51 +89,33 @@ async function Container_Initializer()
 
 let Services_Container = [];
 
-// Helper Function: Validation for POST and PUT payloads
 function validateServicePayload(payload) 
 {
   const { name, description, expected_duration, priority } = payload || {};
 
-  // Required Fields Check
-  if (name === undefined || name === null || String(name).trim() === '') 
-  {
-    return { valid: false, error: 'Service Name is required.' };
-  }
-  if (description === undefined || description === null || String(description).trim() === '') 
-  {
-    return { valid: false, error: 'Description is required.' };
-  }
-  if (expected_duration === undefined || expected_duration === null || String(expected_duration).trim() === '') 
-  {
-    return { valid: false, error: 'Expected Duration is required.' };
-  }
+  if (name === undefined || name === null || String(name).trim() === '') return { valid: false, error: 'Service Name is required.' };
+  if (description === undefined || description === null || String(description).trim() === '') return { valid: false, error: 'Description is required.' };
+  if (expected_duration === undefined || expected_duration === null || String(expected_duration).trim() === '') return { valid: false, error: 'Expected Duration is required.' };
 
-  // String Length Limit Check
   const nameStr = String(name).trim();
-  if (nameStr.length > 100) 
-  {
-    return { valid: false, error: 'Service Name cannot exceed 100 characters.' };
-  }
+  if (nameStr.length > 100) return { valid: false, error: 'Service Name cannot exceed 100 characters.' };
 
-  // Expected Duration Field Type & Range Verification
   const parsedDuration = Number(expected_duration);
-  if (isNaN(parsedDuration) || parsedDuration <= 0) 
-  {
-    return { valid: false, error: 'Expected Duration must be a positive number.' };
-  }
+  if (isNaN(parsedDuration) || parsedDuration <= 0) return { valid: false, error: 'Expected Duration must be a positive number.' };
 
-  // Priority Level Field Verification (low / medium / high or numeric 1 / 2 / 3)
-  let parsedPriority = 'Medium';
+  let numericPriority = 2;
+  let dbEnumPriority = 'Medium';
+  
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') 
   {
-    const lowerPrio = String(priority).toLowerCase().trim();
-    switch (lowerPrio) 
-    {
-      case 'low': case '1': parsedPriority = 'Low'; break;
-      case 'medium': case '2': parsedPriority = 'Medium'; break;
-      case 'high': case '3': parsedPriority = 'High'; break;
-      default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
-    }
+      const lowerPrio = String(priority).toLowerCase().trim();
+      switch (lowerPrio) 
+      {
+          case 'low': case '1': numericPriority = 1; dbEnumPriority = 'Low'; break;
+          case 'medium': case '2': numericPriority = 2; dbEnumPriority = 'Medium'; break;
+          case 'high': case '3': numericPriority = 3; dbEnumPriority = 'High'; break;
+          default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
+      }
   }
 
   return {
@@ -157,70 +124,63 @@ function validateServicePayload(payload)
       name: nameStr,
       description: String(description).trim(),
       expected_duration: parsedDuration,
-      priority: parsedPriority
+      priority: numericPriority,
+      dbPriority: dbEnumPriority
     }
   };
 }
 
-// Functions for Dashboard
 async function Status_Changer(service_id, new_status) 
 {
-  const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
+    const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
 
-  if (!targetService) { return null; }
+    if (!targetService) return null;
 
-  const formattedStatus = normalizeStatus(new_status);
+    const formattedStatus = normalizeStatus(new_status);
 
-  await pool.query('CALL Service_Status_UPDATE(?, ?);', [service_id, formattedStatus]);
-  targetService.operation_status = formattedStatus;
-  return targetService;
+    await pool.query('CALL Service_Status_UPDATE(?, ?);', [service_id, formattedStatus]);
+    targetService.operation_status = formattedStatus;
+    return targetService;
 }
 
-// Express Route to handle status changes
-app.patch('/api/admin/services/status', async (req, res) => {
-  const { service_id, status } = req.body;
+app.patch('/api/admin/services/status', async (req, res) => 
+{
+    const { service_id, status } = req.body;
 
-  if (!(service_id && status)) 
-  {
-    return res.status(400).json({ error: 'Missing service_id or status in request body.' });
-  }
+    if (!(service_id && status)) return res.status(400).json({ error: 'Missing service_id or status in request body.' });
 
-  try 
-  {
-    const updatedService = await Status_Changer(service_id, status);
-
-    if (updatedService) 
+    try 
     {
-      // Broadcast real-time update to all connected WebSocket clients
-      io.emit('queue_updated', Services_Container);
+      const updatedService = await Status_Changer(service_id, status);
 
-      return res.status(200).json({
-        message: 'Status updated successfully',
-        service: updatedService
-      });
-    }
+      if (updatedService) 
+      {
+        io.emit('queue_updated', Services_Container);
 
-    return res.status(404).json({ error: 'Service not found.' });
-  } catch (error) 
-  {
-    return res.status(500).json({ error: error.message });
-  }
+        return res.status(200).json({
+            message: 'Status updated successfully',
+            service: updatedService
+        });
+      }
+
+      return res.status(404).json({ error: 'Service not found.' });
+    } 
+    catch (error) {  return res.status(500).json({ error: error.message });  }
 });
 
-// Functions and Functionality for Service Management
-// POST: Create a new service
-app.post('/api/admin/services', async (req, res) => {
+app.post('/api/admin/services', async (req, res) => 
+{
   const validation = validateServicePayload(req.body);
-  if (!validation.valid) { return res.status(400).json({ error: validation.error }); }
+  if (!validation.valid) return res.status(400).json({ error: validation.error });
 
-  const { name, description, expected_duration, priority } = validation.data;
+  const { name, description, expected_duration, priority, dbPriority } = validation.data;
 
   const existingService = Services_Container.find(s => s.name === name);
-  if (existingService) { return res.status(409).json({ error: 'Service with this name already exists.' }); }
+  if (existingService) return res.status(409).json({ error: 'Service with this name already exists.' });
 
   try 
   {
-    const [rows] = await pool.query('CALL INSERT_Service(?, ?, ?, ?);', [name, description, expected_duration, priority]);
+    const [rows] = await pool.query('CALL INSERT_Service(?, ?, ?, ?);', [name, description, expected_duration, dbPriority]);
     const generatedId = rows[0][0].generated_id;
 
     const newService = new Service_Entry(
@@ -229,69 +189,67 @@ app.post('/api/admin/services', async (req, res) => {
       description,
       expected_duration,
       priority,
-      0,
-      'open'
+      0
     );
 
-    let insertIndex = Services_Container.findIndex(s => priorityToNumeric(s.priority) < priorityToNumeric(priority));
+    let insertIndex = Services_Container.findIndex(s => s.priority < priority);
 
-    if (insertIndex === -1) 
-    {
-      Services_Container.push(newService);
-    } else 
-    {
-      Services_Container.splice(insertIndex, 0, newService);
-    }
+    if (insertIndex === -1) Services_Container.push(newService);
+    else Services_Container.splice(insertIndex, 0, newService);
 
-    // Broadcast updated container over WebSockets
     io.emit('queue_updated', Services_Container);
 
     return res.status(201).json({ message: 'Service created successfully', service: newService });
-  } catch (error) 
+  } 
+  catch (error) 
   {
     return res.status(500).json({ error: error.message });
   }
 });
 
-// PUT: Update an existing service
-app.put('/api/admin/services', async (req, res) => {
+app.put('/api/admin/services', async (req, res) => 
+{
   const { service_id } = req.body;
-  if (!service_id) { return res.status(400).json({ error: 'service_id is required.' }); }
+  if (!service_id) return res.status(400).json({ error: 'service_id is required.' });
 
   const validation = validateServicePayload(req.body);
-  if (!validation.valid) { return res.status(400).json({ error: validation.error }); }
+  if (!validation.valid) return res.status(400).json({ error: validation.error });
 
-  const { name, description, expected_duration, priority } = validation.data;
+  const { name, description, expected_duration, priority, dbPriority } = validation.data;
 
-  const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
-  if (!targetService) { return res.status(404).json({ error: 'Service not found.' }); }
+  const existingIndex = Services_Container.findIndex(s => String(s.service_id) === String(service_id));
+  if (existingIndex === -1) return res.status(404).json({ error: 'Service not found.' });
 
   try 
   {
-    await pool.query('CALL UPDATE_Service(?, ?, ?, ?, ?);', [service_id, name, description, expected_duration, priority]);
+    await pool.query('CALL UPDATE_Service(?, ?, ?, ?, ?);', [service_id, name, description, expected_duration, dbPriority]);
 
+    const targetService = Services_Container[existingIndex];
     targetService.name = name;
     targetService.description = description;
     targetService.expected_duration = expected_duration;
     targetService.priority = priority;
 
-    Services_Container = sortServicesByPriority(Services_Container);
+    // Remove from current position and re-insert at the bottom of its target priority group
+    Services_Container.splice(existingIndex, 1);
+
+    let targetIndex = Services_Container.findIndex(s => s.priority < priority);
+    if (targetIndex === -1) Services_Container.push(targetService);
+    else Services_Container.splice(targetIndex, 0, targetService);
 
     io.emit('queue_updated', Services_Container);
 
     return res.status(200).json({ message: 'Service updated successfully', service: targetService });
-  } catch (error) 
-  {
-    return res.status(500).json({ error: error.message });
-  }
+  } 
+  catch (error) {  return res.status(500).json({ error: error.message });  }
 });
 
-// DELETE: Remove a service by service_id
-app.delete('/api/admin/services/:id', async (req, res) => {
+app.delete('/api/admin/services/:id', async (req, res) => 
+{
   const serviceId = req.params.id;
 
   const index = Services_Container.findIndex(s => String(s.service_id) === String(serviceId));
-  if (index === -1) { return res.status(404).json({ error: 'Service not found.' }); }
+  if (index === -1) return res.status(404).json({ error: 'Service not found.' });
 
   try 
   {
@@ -302,16 +260,11 @@ app.delete('/api/admin/services/:id', async (req, res) => {
     io.emit('queue_updated', Services_Container);
 
     return res.status(200).json({ message: 'Service deleted successfully' });
-  } catch (error) 
-  {
-    return res.status(500).json({ error: error.message });
-  }
+  } 
+  catch (error) {  return res.status(500).json({ error: error.message });  }
 });
 
-// Express Route
-app.get('/api/admin/services', (req, res) => {
-  res.status(200).json(Services_Container);
-});
+app.get('/api/admin/services', (req, res) => {  res.status(200).json(Services_Container);  });
 
 // WebSocket Connection Logic
 // (Richard) Tells the notification service (port 3001) that a client was served, so the
@@ -332,19 +285,19 @@ function notifyServed(servedClient, serviceName) {
   }).catch(() => { /* notification service unreachable — ignore */ });
 }
 
-io.on('connection', (socket) => {
+io.on('connection', (socket) => 
+{
   console.log('Client connected to Queue WS:', socket.id);
 
-  // Send initial queue state to newly connected client
   socket.emit('queue_updated', Services_Container);
 
-  // SERVER-SIDE DISCONNECT HANDLER
-  socket.on('disconnect', (reason) => {
-    console.log(`Client disconnected from Queue WS (${socket.id}). Reason: ${reason}`);
+  socket.on('disconnect', (reason) => 
+  {
+      console.log(`Client disconnected from Queue WS (${socket.id}). Reason: ${reason}`);
   });
 
-  // ADMIN ACTION: Serve next client (removes first person from array)
-  socket.on('serve_client', (data) => {
+  socket.on('serve_client', (data) => 
+  {
     const { service_id } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
@@ -358,8 +311,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ADMIN ACTION: Remove specific client or first client
-  socket.on('remove_client', (data) => {
+  socket.on('remove_client', (data) => 
+  {
     const { service_id, client_index } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
@@ -372,8 +325,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ADMIN ACTION: Drag & Drop Reorder
-  socket.on('reorder_queue', (data) => {
+  socket.on('reorder_queue', (data) => 
+  {
     const { service_id, updated_queue } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
@@ -385,8 +338,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  // USER ACTION: Join Queue voluntarily
-  socket.on('join_queue', (data) => {
+  socket.on('join_queue', (data) => 
+  {
     const { service_id, client_name } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
@@ -398,8 +351,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  // USER ACTION: Leave Queue voluntarily
-  socket.on('leave_queue', (data) => {
+  socket.on('leave_queue', (data) => 
+  {
     const { service_id, client_name } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
     if (service && client_name) 
@@ -408,26 +361,23 @@ io.on('connection', (socket) => {
 
       if (index !== -1) 
       {
-        service.Queue_Array.splice(index, 1);
-        service.queue_length = service.Queue_Array.length;
-        io.emit('queue_updated', Services_Container);
+          service.Queue_Array.splice(index, 1);
+          service.queue_length = service.Queue_Array.length;
+          io.emit('queue_updated', Services_Container);
       }
     }
   });
 });
 
-// Function to start the server programmatically
 async function startServer(port = 3000) 
 {
   Services_Container = await Container_Initializer();
-  return server.listen(port, () => {
+  return server.listen(port, () => 
+  {
     console.log(`AdminBackend (HTTP + WebSockets) listening on port ${port}`);
   });
 }
 
-// Automatically start if executed directly via Node (`node AdminBackend.js`)
-/* istanbul ignore next*/
-if (require.main === module) {  startServer(3000);  }
+if (require.main === module) startServer(3000);
 
-// Export for Jest testing
 module.exports = { app, server, io, startServer, Service_Entry, Container_Initializer, Status_Changer };

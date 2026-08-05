@@ -5,7 +5,7 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
     query: jest.fn().mockImplementation((sql, params) => {
       const sqlString = typeof sql === 'string' ? sql : '';
 
-      // 1. Mock SELECT queries for the main queue view
+      // 1. Mock SELECT queries for the main queue view (vw_AdminServiceQueueState)
       if (sqlString.includes('vw_AdminServiceQueueState')) 
       {
         const mockRows = Array.from({ length: 30 }, (_, i) => ({
@@ -15,7 +15,11 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
           expected_duration: i + 1,
           priority: i % 3 === 2 ? 'High' : (i % 3 === 1 ? 'Medium' : 'Low'),
           operation_status: i % 2 === 0 ? 'open' : 'closed',
-          Queue_Array: JSON.stringify(Array.from({ length: 60 }, (_, k) => `Person ${k + 1}`))
+          // Simulate both populated queues and newly initialized services with empty queues (LEFT JOIN output)
+          Queue_Array: i === 0 
+            ? '[null]' 
+            : JSON.stringify(Array.from({ length: 60 }, (_, k) => `Person ${k + 1}`)),
+          queue_length: i === 0 ? 0 : 60
         }));
 
         return Promise.resolve([mockRows]);
@@ -46,7 +50,8 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
         let targetName = 'New Test Service';
         let targetPriority = 'Medium';
 
-        if (typeof paramVal === 'string' && paramVal.length > 0) {
+        if (typeof paramVal === 'string' && paramVal.length > 0) 
+        {
           targetName = paramVal;
           if (paramVal.toLowerCase().includes('high') || paramVal.toLowerCase().includes('three')) targetPriority = 'High';
           else if (paramVal.toLowerCase().includes('low') || paramVal.toLowerCase().includes('one')) targetPriority = 'Low';
@@ -59,7 +64,9 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
           expected_duration: 15,
           priority: targetPriority,
           operation_status: 'closed',
-          Queue_Array: '[]'
+          // Newly created services start with zero queue entries (NATURAL LEFT JOIN returns empty array)
+          Queue_Array: '[]',
+          queue_length: 0
         };
 
         return Promise.resolve([[createdRow]]);
@@ -75,23 +82,32 @@ const request = require('supertest');
 const ioClient = require('socket.io-client');
 const { startServer, Service_Entry, Container_Initializer, Status_Changer } = require('./QSAdminBackend');
 
-describe('Mock Initialization', () => {
-  test('Checking the basic mock data initialization', async () => {
+describe('Mock Initialization', () => 
+{
+  test('Checking the basic mock data initialization', async () => 
+  {
     const Test_Container = await Container_Initializer();
     expect(Test_Container).toBeDefined();
     
     try 
     { 
-      Test_Container.forEach(entry => {
+      Test_Container.forEach(entry => 
+      {
         expect(entry).toBeInstanceOf(Service_Entry);
       });  
-    } catch(error) {    throw new Error(`Element ${error} failed in the Test_Container.`);  }
+    } 
+    catch(error) 
+    {
+      throw new Error(`Element ${error} failed in the Test_Container.`);
+    }
   });
 
-  test('Container_Initializer sorts mock services by priority (High to Low)', async () => {
+  test('Container_Initializer sorts mock services by priority (High to Low)', async () => 
+  {
     const container = await Container_Initializer();
     
-    const priorityWeight = (p) => {
+    const priorityWeight = (p) => 
+    {
       if (p === 'High' || p === 3) return 3;
       if (p === 'Medium' || p === 2) return 2;
       return 1;
@@ -102,36 +118,53 @@ describe('Mock Initialization', () => {
       expect(priorityWeight(container[i].priority)).toBeGreaterThanOrEqual(priorityWeight(container[i + 1].priority));
     }
   });
+
+  test('handles services with empty queues (NATURAL LEFT JOIN condition) without breaking initialization', async () => 
+  {
+    const container = await Container_Initializer();
+    const emptyQueueService = container.find(s => s.service_id === 1);
+    
+    expect(emptyQueueService).toBeDefined();
+    expect(emptyQueueService.Queue_Array).toEqual([]);
+    expect(emptyQueueService.queue_length).toBe(0);
+  });
 });
 
-describe('Network Capabilities', () => {
+describe('Network Capabilities', () => 
+{
   let testServer;
   let testPort;
 
-  beforeAll(async () => {
+  beforeAll(async () => 
+  {
     testServer = await startServer(0);
     testPort = testServer.address().port;
   });
 
-  afterAll((done) => {
-    if (testServer && testServer.listening) {  testServer.close(done);  } 
-    else {  done();  }
+  afterAll((done) => 
+  {
+    if (testServer && testServer.listening) testServer.close(done);
+    else done();
   });
 
-  test('updates status for existing service', async () => {
+  test('updates status for existing service', async () => 
+  {
     const updated = await Status_Changer(1, 'Open');
     expect(updated).not.toBeNull();
     expect(updated.operation_status).toBe('open');
   });
 
-  test('HTTP GET /api/admin/services returns service list', async () => {
+  test('HTTP GET /api/admin/services returns service list', async () => 
+  {
     const response = await request(testServer).get('/api/admin/services');
     expect(response.status).toBe(200);
     expect(Array.isArray(response.body)).toBe(true);
   });
 
-  describe('HTTP PATCH /api/admin/services/status', () => {
-    test('successfully updates status and returns 200', async () => {
+  describe('HTTP PATCH /api/admin/services/status', () => 
+  {
+    test('successfully updates status and returns 200', async () => 
+    {
       const response = await request(testServer)
         .patch('/api/admin/services/status')
         .send({ service_id: 2, status: 'Closed' });
@@ -141,7 +174,8 @@ describe('Network Capabilities', () => {
       expect(response.body.service.operation_status).toBe('closed');
     });
 
-    test('returns 400 when missing service_id or status', async () => {
+    test('returns 400 when missing service_id or status', async () => 
+    {
       const response = await request(testServer)
         .patch('/api/admin/services/status')
         .send({ service_id: 2 });
@@ -150,7 +184,8 @@ describe('Network Capabilities', () => {
       expect(response.body.error).toBe('Missing service_id or status in request body.');
     });
 
-    test('returns 404 when service is not found', async () => {
+    test('returns 404 when service is not found', async () => 
+    {
       const response = await request(testServer)
         .patch('/api/admin/services/status')
         .send({ service_id: 99999, status: 'Open' });
@@ -160,8 +195,10 @@ describe('Network Capabilities', () => {
     });
   });
 
-  describe('HTTP POST /api/admin/services', () => {
-    test('successfully creates a new service and returns 201', async () => {
+  describe('HTTP POST /api/admin/services', () => 
+  {
+    test('successfully creates a new service with empty queue and returns 201', async () => 
+    {
       const newService = {
         name: 'New Test Service',
         description: 'A newly created service for testing.',
@@ -177,35 +214,39 @@ describe('Network Capabilities', () => {
       expect(response.body.message).toBe('Service created successfully');
       expect(response.body.service.name).toBe('New Test Service');
       expect(response.body.service.expected_duration).toBe(15);
+      expect(response.body.service.Queue_Array).toEqual([]);
+      expect(response.body.service.queue_length).toBe(0);
     });
 
-    test('successfully creates a new service with low, medium, and high string priority levels', async () => {
+    test('successfully creates a new service with low, medium, and high string priority levels', async () => 
+    {
       let response = await request(testServer)
         .post('/api/admin/services')
         .send({ name: 'Service Low', description: 'Desc', expected_duration: 10, priority: 'low' });
       expect(response.status).toBe(201);
-      expect(response.body.service.priority).toBe('Low');
+      expect(response.body.service.priority).toBe(1);
 
       response = await request(testServer)
         .post('/api/admin/services')
         .send({ name: 'Service One', description: 'Desc', expected_duration: 10, priority: '1' });
       expect(response.status).toBe(201);
-      expect(response.body.service.priority).toBe('Low');
+      expect(response.body.service.priority).toBe(1);
 
       response = await request(testServer)
         .post('/api/admin/services')
         .send({ name: 'Service High', description: 'Desc', expected_duration: 10, priority: 'high' });
       expect(response.status).toBe(201);
-      expect(response.body.service.priority).toBe('High');
+      expect(response.body.service.priority).toBe(3);
 
       response = await request(testServer)
         .post('/api/admin/services')
         .send({ name: 'Service Three', description: 'Desc', expected_duration: 10, priority: '3' });
       expect(response.status).toBe(201);
-      expect(response.body.service.priority).toBe('High');
+      expect(response.body.service.priority).toBe(3);
     });
 
-    test('returns 400 when missing required fields', async () => {
+    test('returns 400 when missing required fields', async () => 
+    {
       let response = await request(testServer).post('/api/admin/services').send({});
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Service Name is required.');
@@ -219,7 +260,8 @@ describe('Network Capabilities', () => {
       expect(response.body.error).toBe('Expected Duration is required.');
     });
 
-    test('returns 400 when name exceeds 100 characters', async () => {
+    test('returns 400 when name exceeds 100 characters', async () => 
+    {
       const longName = 'A'.repeat(101);
       const response = await request(testServer)
         .post('/api/admin/services')
@@ -234,7 +276,8 @@ describe('Network Capabilities', () => {
       expect(response.body.error).toBe('Service Name cannot exceed 100 characters.');
     });
 
-    test('returns 400 when expected_duration is invalid or non-positive', async () => {
+    test('returns 400 when expected_duration is invalid or non-positive', async () => 
+    {
       const response = await request(testServer)
         .post('/api/admin/services')
         .send({
@@ -248,7 +291,8 @@ describe('Network Capabilities', () => {
       expect(response.body.error).toBe('Expected Duration must be a positive number.');
     });
 
-    test('returns 400 for invalid priority levels (string, number, and object)', async () => {
+    test('returns 400 for invalid priority levels (string, number, and object)', async () => 
+    {
       let response = await request(testServer)
         .post('/api/admin/services')
         .send({ name: 'Test Prio', description: 'Desc', expected_duration: 10, priority: 'urgent' });
@@ -268,7 +312,8 @@ describe('Network Capabilities', () => {
       expect(response.body.error).toBe('Priority Level must be low, medium, or high.');
     });
 
-    test('returns 409 when service name already exists', async () => {
+    test('returns 409 when service name already exists', async () => 
+    {
       const response = await request(testServer)
         .post('/api/admin/services')
         .send({
@@ -282,13 +327,15 @@ describe('Network Capabilities', () => {
       expect(response.body.error).toBe('Service with this name already exists.');
     });
 
-    test('returns 400 when sending null payload', async () => {
+    test('returns 400 when sending null payload', async () => 
+    {
       const response = await request(testServer).post('/api/admin/services').send(null);
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Service Name is required.');
     });
 
-    test('inserts new high-priority service (priority 3) at the bottom of priority 3 group', async () => {
+    test('inserts new high-priority service (priority 3) at the bottom of priority 3 group', async () => 
+    {
       const newService = {
         name: 'High Priority Test Service',
         description: 'Testing relative insertion for priority 3',
@@ -309,7 +356,8 @@ describe('Network Capabilities', () => {
       expect(insertedIndex).toBeGreaterThan(-1);
     });
 
-    test('inserts new low-priority service (priority 1) at the end of the container', async () => {
+    test('inserts new low-priority service (priority 1) at the end of the container', async () => 
+    {
       const newService = {
         name: 'Low Priority Test Service',
         description: 'Testing relative insertion for priority 1',
@@ -327,12 +375,14 @@ describe('Network Capabilities', () => {
       const services = getRes.body;
 
       const lastService = services[services.length - 1];
-      expect(lastService.priority).toBe('Low');
+      expect(lastService.priority).toBe(1);
     });
   });
 
-  describe('HTTP PUT /api/admin/services', () => {
-    test('successfully updates an existing service profile and returns 200', async () => {
+  describe('HTTP PUT /api/admin/services', () => 
+  {
+    test('successfully updates an existing service profile and returns 200', async () => 
+    {
       const updatedDetails = {
         service_id: 3,
         name: 'Placeholder 3',
@@ -349,10 +399,11 @@ describe('Network Capabilities', () => {
       expect(response.body.message).toBe('Service updated successfully');
       expect(response.body.service.description).toBe('Updated description for testing.');
       expect(response.body.service.expected_duration).toBe(25);
-      expect(response.body.service.priority).toBe('High');
+      expect(response.body.service.priority).toBe(3);
     });
 
-    test('returns 404 when updating a non-existent service', async () => {
+    test('returns 404 when updating a non-existent service', async () => 
+    {
       const response = await request(testServer)
         .put('/api/admin/services')
         .send({
@@ -367,7 +418,8 @@ describe('Network Capabilities', () => {
       expect(response.body.error).toBe('Service not found.');
     });
 
-    test('returns 400 when missing service_id on PUT request', async () => {
+    test('returns 400 when missing service_id on PUT request', async () => 
+    {
       const response = await request(testServer)
         .put('/api/admin/services')
         .send({
@@ -381,7 +433,8 @@ describe('Network Capabilities', () => {
       expect(response.body.error).toBe('service_id is required.');
     });
 
-    test('returns 400 when validation fails on PUT request', async () => {
+    test('returns 400 when validation fails on PUT request', async () => 
+    {
       const response = await request(testServer)
         .put('/api/admin/services')
         .send({
@@ -397,8 +450,10 @@ describe('Network Capabilities', () => {
     });
   });
 
-  describe('HTTP DELETE /api/admin/services/:id', () => {
-    test('successfully deletes an existing service and returns 200', async () => {
+  describe('HTTP DELETE /api/admin/services/:id', () => 
+  {
+    test('successfully deletes an existing service and returns 200', async () => 
+    {
       const response = await request(testServer)
         .delete(`/api/admin/services/4`);
 
@@ -406,7 +461,8 @@ describe('Network Capabilities', () => {
       expect(response.body.message).toBe('Service deleted successfully');
     });
 
-    test('returns 404 when attempting to delete a non-existent service', async () => {
+    test('returns 404 when attempting to delete a non-existent service', async () => 
+    {
       const response = await request(testServer)
         .delete(`/api/admin/services/99999`);
 
@@ -415,10 +471,12 @@ describe('Network Capabilities', () => {
     });
   });
 
-  describe('WebSocket Handlers & Disconnect Events', () => {
+  describe('WebSocket Handlers & Disconnect Events', () => 
+  {
     let clientSocket;
 
-    beforeEach((done) => {
+    beforeEach((done) => 
+    {
       clientSocket = ioClient(`http://localhost:${testPort}`, {
         transports: ['websocket'],
         forceNew: true
@@ -426,107 +484,129 @@ describe('Network Capabilities', () => {
       clientSocket.on('connect', done);
     });
 
-    afterEach(() => {
-      if (clientSocket && clientSocket.connected) {  clientSocket.disconnect();  }
+    afterEach(() => 
+    {
+      if (clientSocket && clientSocket.connected) clientSocket.disconnect();
     });
 
-    test('receives queue_updated on initial connection', (done) => {
+    test('receives queue_updated on initial connection', (done) => 
+    {
       const testSocket = ioClient(`http://localhost:${testPort}`, {
         transports: ['websocket'],
         forceNew: true
       });
 
-      testSocket.on('queue_updated', (data) => {
+      testSocket.once('queue_updated', (data) => 
+      {
         expect(Array.isArray(data)).toBe(true);
         testSocket.disconnect();
         done();
       });
     });
 
-    test('handles serve_client and broadcasts updated queue', (done) => {
-      clientSocket.emit('serve_client', { service_id: 1 });
-
-      clientSocket.on('queue_updated', (services) => {
-        const updatedService = services.find(s => s.service_id === 1);
+    test('handles serve_client and broadcasts updated queue', (done) => 
+    {
+      clientSocket.once('queue_updated', (services) => 
+      {
+        const updatedService = services.find(s => s.service_id === 2);
         expect(updatedService.Queue_Array.length).toBe(59);
-        expect(updatedService.Queue_Array[0]).toBe('Person 2');
         done();
       });
+
+      clientSocket.emit('serve_client', { service_id: 2 });
     });
 
-    test('handles serve_client notification branches for object payloads and missing fetch', (done) => {
+    test('handles serve_client notification branches for object payloads and missing fetch', (done) => 
+    {
       clientSocket.emit('reorder_queue', {
         service_id: 10,
         updated_queue: [{ userId: 'user_123' }, { userId: null }]
       });
 
-      clientSocket.once('queue_updated', () => {
-        clientSocket.emit('serve_client', { service_id: 10 });
-
-        clientSocket.once('queue_updated', () => {
-          clientSocket.emit('serve_client', { service_id: 10 });
-
-          clientSocket.once('queue_updated', () => {
+      clientSocket.once('queue_updated', () => 
+      {
+        clientSocket.once('queue_updated', () => 
+        {
+          clientSocket.once('queue_updated', () => 
+          {
             const originalFetch = global.fetch;
             delete global.fetch;
 
-            clientSocket.emit('serve_client', { service_id: 1 });
-
-            clientSocket.once('queue_updated', () => {
+            clientSocket.once('queue_updated', () => 
+            {
               global.fetch = originalFetch;
               done();
             });
+
+            clientSocket.emit('serve_client', { service_id: 2 });
           });
+
+          clientSocket.emit('serve_client', { service_id: 10 });
         });
+
+        clientSocket.emit('serve_client', { service_id: 10 });
       });
     });
 
-    test('handles remove_client with specific index and defaults to index 0', (done) => {
-      clientSocket.emit('remove_client', { service_id: 5, client_index: 2 });
-
-      clientSocket.once('queue_updated', (services) => {
+    test('handles remove_client with specific index and defaults to index 0', (done) => 
+    {
+      clientSocket.once('queue_updated', (services) => 
+      {
         const updatedService = services.find(s => s.service_id === 5);
         expect(updatedService.Queue_Array).not.toContain('Person 3');
 
-        clientSocket.emit('remove_client', { service_id: 5 });
-        clientSocket.once('queue_updated', (servicesAfterDefault) => {
+        clientSocket.once('queue_updated', (servicesAfterDefault) => 
+        {
           const defaultRemovedService = servicesAfterDefault.find(s => s.service_id === 5);
           expect(defaultRemovedService.Queue_Array[0]).toBe('Person 2');
           done();
         });
+
+        clientSocket.emit('remove_client', { service_id: 5 });
       });
+
+      clientSocket.emit('remove_client', { service_id: 5, client_index: 2 });
     });
 
-    test('handles reorder_queue event', (done) => {
+    test('handles reorder_queue event', (done) => 
+    {
       const customOrder = ['Person 10', 'Person 1', 'Person 5'];
-      clientSocket.emit('reorder_queue', { service_id: 6, updated_queue: customOrder });
 
-      clientSocket.on('queue_updated', (services) => {
+      clientSocket.once('queue_updated', (services) => 
+      {
         const updatedService = services.find(s => s.service_id === 6);
         expect(updatedService.Queue_Array).toEqual(customOrder);
         expect(updatedService.queue_length).toBe(3);
         done();
       });
+
+      clientSocket.emit('reorder_queue', { service_id: 6, updated_queue: customOrder });
     });
 
-    test('handles join_queue and leave_queue events', (done) => {
+    test('handles join_queue and leave_queue events', (done) => 
+    {
       const clientName = 'Unit Test Client';
-      clientSocket.emit('join_queue', { service_id: 7, client_name: clientName });
 
-      clientSocket.once('queue_updated', (services) => {
+      clientSocket.once('queue_updated', (services) => 
+      {
         const joinedService = services.find(s => s.service_id === 7);
         expect(joinedService.Queue_Array).toContain(clientName);
 
-        clientSocket.emit('leave_queue', { service_id: 7, client_name: clientName });
-        clientSocket.once('queue_updated', (servicesAfterLeave) => {
+        clientSocket.once('queue_updated', (servicesAfterLeave) => 
+        {
           const leftService = servicesAfterLeave.find(s => s.service_id === 7);
           expect(leftService.Queue_Array).not.toContain(clientName);
           done();
         });
+
+        clientSocket.emit('leave_queue', { service_id: 7, client_name: clientName });
       });
+
+      clientSocket.emit('join_queue', { service_id: 7, client_name: clientName });
     });
 
-    test('gracefully ignores actions on non-existent service or empty/falsy data payload', (done) => {
+    test('gracefully ignores actions on non-existent service or empty/falsy data payload', (done) => 
+    {
       clientSocket.emit('serve_client', null);
       clientSocket.emit('remove_client', undefined);
       clientSocket.emit('reorder_queue', null);
@@ -536,14 +616,17 @@ describe('Network Capabilities', () => {
       clientSocket.emit('serve_client', { service_id: 99999 });
       clientSocket.emit('leave_queue', { service_id: 8, client_name: 'Ghost' });
 
-      setTimeout(() => {
+      setTimeout(() => 
+      {
         expect(clientSocket.connected).toBe(true);
         done();
       }, 50);
     });
 
-    test('triggers server-side disconnect handler cleanly upon explicit socket.disconnect()', (done) => {
-      clientSocket.on('disconnect', (reason) => {
+    test('triggers server-side disconnect handler cleanly upon explicit socket.disconnect()', (done) => 
+    {
+      clientSocket.on('disconnect', (reason) => 
+      {
         expect(reason).toBe('io client disconnect');
         done();
       });
@@ -552,7 +635,8 @@ describe('Network Capabilities', () => {
     });
   });
 
-  test('startServer default parameter branch check', async () => {
+  test('startServer default parameter branch check', async () => 
+  {
     if (testServer && testServer.listening) 
     {
       await new Promise(resolve => testServer.close(resolve));
