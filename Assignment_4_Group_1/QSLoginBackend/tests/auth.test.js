@@ -144,3 +144,44 @@ describe('POST /api/admin-login', () => {
     expect(res.statusCode).toBe(401);
   });
 });
+
+describe('PUT /api/user/update', () => {
+  beforeEach(async() => {
+    await db.deleteUserByEmail('updateuser@test.com');
+    await request(app).post('/api/signup/')
+      .send({name: 'Original Name', email: 'updateuser@test.com', password: 'testpass123'});
+  });
+
+  test('updates name with correct current password', async () => {
+    const res = await request(app)
+      .put('/api/user/update')
+      .send({email: 'updateuser@test.com', currentPassword: 'testpass123', newName: 'New Name'});
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe('Account updated successfully.');
+  });
+
+  test('rejects update with wrong current password', async () => {
+    const res = await request(app)
+      .put('/api/user/update')
+      .send({email: 'updateuser@test.com', currentPassword: 'wrongpass', newName: 'New Name'});
+    expect(res.statusCode).toBe(401);
+  });
+
+  test('rejects new password outside length bounds', async() => {
+    const res = await request(app)
+      .put('/api/user/update')
+      .send({email: 'updateuser@test.com', currentPassword: 'testpass123', newPassword: 'short'});
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('successfully changes password and old password stops working', async () => {
+    await request(app).put('/api/user/update')
+      .send({email: 'updateuser@test.com', currentPassword: 'testpass123', newPassword: 'newpass456'});
+    const oldLogin = await request(app).post('/api/login')
+      .send({email: 'updateuser@test.com', password: 'testpass123'});
+    expect(oldLogin.statusCode).toBe(401);
+    const newLogin = await request(app).post('/api/login')
+      .send({email: 'updateuser@test.com', password: 'newpass456'});
+    expect(newLogin.statusCode).toBe(200);
+  });
+});
