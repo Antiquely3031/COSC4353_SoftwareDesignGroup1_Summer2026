@@ -203,6 +203,38 @@ app.get("/api/queue/status/:userId", async (req, res) => {
         })
     }
 });
+//to get queue history of the user
+app.get("/api/queue/history/:userId", async (req, res) => {
+    try {
+        const {userId} = req.params;
+        const [rows] = await db.query(
+            `SELECT 
+                qe.queue_entry_id,
+                qe.queue_id,
+                qe.user_id,
+                qe.position,
+                qe.join_time,
+                qe.status,
+                s.service_name,
+                s.expected_duration
+             FROM QueueEntry qe
+             JOIN \`Queue\` q ON qe.queue_id = q.queue_id
+             JOIN Service s ON q.service_id = s.service_id
+             WHERE qe.user_id = ?
+             ORDER BY qe.join_time DESC`,
+            [userId]
+        );
+
+        res.json(rows);
+    }
+    catch(error)
+    {
+        console.error("Error retrieving queue history for user", error);
+        res.status(500).json({
+            error: "Failed to retrieve queue history"
+        });
+    }
+});
 const PORT = process.env.PORT || 3000;
 //Connection testing, if this appears we have a successful commection
 app.listen(PORT, () => {
