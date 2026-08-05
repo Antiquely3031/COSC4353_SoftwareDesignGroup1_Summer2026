@@ -1,3 +1,9 @@
+jest.mock('nodemailer', () => ({
+  createTransport: () => ({
+    sendMail: jest.fn().mockResolvedValue({response: 'mocked'})
+  })
+}));
+
 const request = require('supertest');
 const app = require('../app');
 const db = require('../db');
@@ -183,5 +189,97 @@ describe('PUT /api/user/update', () => {
     const newLogin = await request(app).post('/api/login')
       .send({email: 'updateuser@test.com', password: 'newpass456'});
     expect(newLogin.statusCode).toBe(200);
+  });
+});
+
+describe('POST /api/forgot-password', () => {
+  beforeEach(async () => {
+    await db.deleteUserByEmail('forgotuser@test.com');
+    await request(app).post('/api/signup')
+      .send({name: 'Forgot User', email: 'forgotuser@test.com', password: 'testpass123'});
+  });
+
+  test('returns generic success message for an existing email', async () => {
+    const res = await request(app)
+      .post('/api/forgot-password')
+      .send({email: 'forgotuser@test.com'});
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBeDefined();
+  });
+
+  test('returns generic message for an email that does not exist', async () => {
+    const res = await request(app)
+      .post('/api/forgot-password')
+      .send({email: 'doesnotexist@test.com'});
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBeDefined();
+  });
+
+  test('rejects missing email', async () => {
+    const res = await request(app)
+      .post('/api/forgot-password')
+      .send({});
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('sets reset token in database for real user', async () => {
+    await request(app).post('/api/forgot-password').send({email: 'forgotuser@test.com'});
+    const user = await db.findUserByEmail('forgotuser@test.com');
+    expect(user.reset_token).not.toBeNull();
+    expect(user.reset_token_expires).not.toBeNull();
+  });
+});
+
+describe('POST /api/reset-password', () => {
+  let validToken;
+  beforeEach(async () => {
+    await db.deleteUserByEmail('resetflow@test.com');
+    await request(app).post('/api/signup')
+      .send({name: 'Reset Flow', email: 'resetflow@test.com', password: 'testpass123'});
+    validToken = 'test-token-' + Date.now();
+    const user = await db.findUserByEmail('resetflow@test.com');
+    const futureExpiry = new Date(Date.now() + 3600000);
+    await db.setResetToken(user.user_id, validToken, futureExpiry);
+  });
+
+  test('rejects missing token password', async () => {
+    const res = await request(app).post('/api/reset-password').send({});
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('rejects an invalid or unkown token', async () => {
+    const res = await request(app)
+      .post('/api/reset-password')
+      .send({token: 'not-a-real-token', newPassword: 'newpass456'});
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('rejects an expired token', async () => {
+    const user = await db.findUserByEmail('resetflow@test.com');
+    const pastExpiry = new Date(Date.now() - 1000);
+    await db.setResetToken(user.user_id, validToken, pastExpiry);
+    const res = await request(app)
+      .post('/api/reset-password')
+      .send({token: validToken, newPassword: 'newpass456'});
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('successful password reset with token', async () => {
+    const res = await request(app)
+      .post('/api/reset-password')
+      .send({token: validToken, newPassword: 'newpass456'});
+    expect(res.statusCode).toBe(200);
+    const login = await request(app).post('/api/login')
+      .send({email: 'resetflow@test.com', password: 'newpass456'});
+    expect(login.statusCode).toBe(200);
+  });
+
+  test('token cannot be reused after reset', async () => {
+    await request(app).post('/api/reset-password')
+      .send({token: validToken, newPassword: 'newpass456'});
+    const secondAttempt = await request(app)
+      .post('/api/reset-password')
+      .send({token: validToken, newPassword: 'anotherpass789'});
+    expect(secondAttempt.statusCode).toBe(400);
   });
 });
