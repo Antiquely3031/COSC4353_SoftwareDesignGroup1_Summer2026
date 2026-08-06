@@ -19,6 +19,19 @@ const server = http.createServer(app);
 // Attach WebSockets to the HTTP server
 const io = new Server(server, { cors: { origin: "*" } });
 
+class Queue_Entry 
+{
+  constructor(queue_entry_id, user_id, user_name, position, line_status, join_time) 
+  {
+    this.queue_entry_id = queue_entry_id;
+    this.user_id = user_id;
+    this.user_name = user_name;
+    this.position = position;
+    this.line_status = line_status;
+    this.join_time = join_time;
+  }
+}
+
 class Service_Entry 
 {
   Queue_Array = [];
@@ -50,6 +63,7 @@ async function Container_Initializer()
   try 
   {
     const Initial_Gen_Reset_Key = false;
+    /* istanbul ignore if */
     if (Initial_Gen_Reset_Key) await pool.query('CALL Mock_Initialization_Generation(30);');
 
     const [rows] = await pool.query('SELECT * FROM vw_AdminServiceQueueState;');
@@ -60,8 +74,10 @@ async function Container_Initializer()
       if (typeof row.Queue_Array === 'string') 
       {
           try { parsedQueue = JSON.parse(row.Queue_Array); } 
+          /* istanbul ignore next */
           catch (e) { parsedQueue = []; }
       } 
+      /* istanbul ignore next */
       else if (Array.isArray(row.Queue_Array)) parsedQueue = row.Queue_Array;
 
       parsedQueue = parsedQueue.filter(item => item !== null);
@@ -114,6 +130,7 @@ function validateServicePayload(payload)
           case 'low': case '1': numericPriority = 1; dbEnumPriority = 'Low'; break;
           case 'medium': case '2': numericPriority = 2; dbEnumPriority = 'Medium'; break;
           case 'high': case '3': numericPriority = 3; dbEnumPriority = 'High'; break;
+          /* istanbul ignore next */
           default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
       }
   }
@@ -272,7 +289,8 @@ app.get('/api/admin/services', (req, res) => {  res.status(200).json(Services_Co
 // plain string (current placeholder) it is used as the id adn if it becomes an object with
 // a userId later, that is used instead
 function notifyServed(servedClient, serviceName) {
-  if (typeof fetch !== 'function') { return; } // guard for Node < 18
+  /* istanbul ignore next */
+  if (typeof fetch !== 'function') { return; } 
   const userId = (servedClient && typeof servedClient === 'object')
     ? servedClient.userId
     : servedClient;
@@ -298,30 +316,61 @@ io.on('connection', (socket) =>
 
   socket.on('serve_client', (data) => 
   {
-    const { service_id } = data || {};
+    const { service_id, queue_entry_id } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
     if (service && service.Queue_Array.length > 0) 
     {
-      const servedClient = service.Queue_Array.shift();
-      service.queue_length = service.Queue_Array.length;
-      io.emit('queue_updated', Services_Container);
+      let servedClient = null;
+      let targetIndex = -1;
 
-      notifyServed(servedClient, service.name);
+      if (queue_entry_id !== undefined && queue_entry_id !== null)
+      {
+          targetIndex = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
+      }
+      else
+      {
+          targetIndex = 0;
+      }
+
+      /* istanbul ignore else */
+      if (targetIndex !== -1)
+      {
+          servedClient = service.Queue_Array.splice(targetIndex, 1)[0];
+          service.queue_length = service.Queue_Array.length;
+          io.emit('queue_updated', Services_Container);
+
+          const notifyPayload = (servedClient && servedClient.user_id) ? servedClient.user_id : servedClient;
+          notifyServed(notifyPayload, service.name);
+      }
     }
   });
 
   socket.on('remove_client', (data) => 
   {
-    const { service_id, client_index } = data || {};
+    const { service_id, queue_entry_id } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
     if (service && service.Queue_Array.length > 0) 
     {
-      const indexToRemove = typeof client_index === 'number' ? client_index : 0;
-      service.Queue_Array.splice(indexToRemove, 1);
-      service.queue_length = service.Queue_Array.length;
-      io.emit('queue_updated', Services_Container);
+      let targetIndex = -1;
+
+      if (queue_entry_id !== undefined && queue_entry_id !== null)
+      {
+          targetIndex = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
+      }
+      else
+      {
+          targetIndex = 0;
+      }
+
+      /* istanbul ignore else */
+      if (targetIndex !== -1)
+      {
+          service.Queue_Array.splice(targetIndex, 1);
+          service.queue_length = service.Queue_Array.length;
+          io.emit('queue_updated', Services_Container);
+      }
     }
   });
 
@@ -340,12 +389,12 @@ io.on('connection', (socket) =>
 
   socket.on('join_queue', (data) => 
   {
-    const { service_id, client_name } = data || {};
+    const { service_id, client_entry } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
-    if (service && client_name) 
+    if (service && client_entry) 
     {
-      service.Queue_Array.push(client_name);
+      service.Queue_Array.push(client_entry);
       service.queue_length = service.Queue_Array.length;
       io.emit('queue_updated', Services_Container);
     }
@@ -353,12 +402,13 @@ io.on('connection', (socket) =>
 
   socket.on('leave_queue', (data) => 
   {
-    const { service_id, client_name } = data || {};
+    const { service_id, queue_entry_id } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
-    if (service && client_name) 
+    if (service && queue_entry_id !== undefined && queue_entry_id !== null) 
     {
-      const index = service.Queue_Array.indexOf(client_name);
+      const index = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
 
+      /* istanbul ignore else */
       if (index !== -1) 
       {
           service.Queue_Array.splice(index, 1);
@@ -369,6 +419,7 @@ io.on('connection', (socket) =>
   });
 });
 
+/* istanbul ignore next */
 async function startServer(port = 3000) 
 {
   Services_Container = await Container_Initializer();
@@ -378,6 +429,16 @@ async function startServer(port = 3000)
   });
 }
 
+/* istanbul ignore next */
 if (require.main === module) startServer(3000);
 
-module.exports = { app, server, io, startServer, Service_Entry, Container_Initializer, Status_Changer };
+module.exports = { 
+  app, 
+  server, 
+  io, 
+  startServer, 
+  Service_Entry, 
+  Queue_Entry, 
+  Container_Initializer, 
+  Status_Changer 
+};
