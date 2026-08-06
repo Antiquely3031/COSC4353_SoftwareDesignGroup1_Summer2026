@@ -183,7 +183,7 @@ BEGIN
     COMMIT;
 END;
 
-CREATE PROCEDURE DELETE_Service(IN p_service_id INT)
+CREATE PROCEDURE DELETE_Service(IN targeted_service_id INT)
 BEGIN
     DECLARE target_queue_id INT;
 
@@ -197,15 +197,11 @@ BEGIN
         -- Retrieve associated queue_id for explicit deletion
         SELECT queue_id INTO target_queue_id 
         FROM Queue 
-        WHERE service_id = p_service_id;
+        WHERE service_id = targeted_service_id;
 
-        -- Explicitly clean up entries and queue if found
-        IF target_queue_id IS NOT NULL THEN
-            DELETE FROM QueueEntry WHERE queue_id = target_queue_id;
-            DELETE FROM Queue WHERE queue_id = target_queue_id;
-        END IF;
-
-        -- Delete parent service record
-        DELETE FROM Service WHERE service_id = p_service_id;
+        -- Delete targeted service and respective records
+        DELETE FROM QueueEntry WHERE queue_id = target_queue_id;
+        DELETE FROM Queue WHERE queue_id = target_queue_id;
+        DELETE FROM Service WHERE service_id = targeted_service_id;
     COMMIT;
 END
