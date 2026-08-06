@@ -149,15 +149,15 @@ function validateServicePayload(payload)
 
 async function Status_Changer(service_id, new_status) 
 {
-    const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
+  const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
 
-    if (!targetService) return null;
+  if (!targetService) return null;
 
-    const formattedStatus = normalizeStatus(new_status);
+  const formattedStatus = normalizeStatus(new_status);
 
-    await pool.query('CALL Service_Status_UPDATE(?, ?);', [service_id, formattedStatus]);
-    targetService.operation_status = formattedStatus;
-    return targetService;
+  await pool.query('CALL Service_Status_UPDATE(?, ?);', [service_id, formattedStatus]);
+  targetService.operation_status = formattedStatus;
+  return targetService;
 }
 
 app.patch('/api/admin/services/status', async (req, res) => 
@@ -175,8 +175,8 @@ app.patch('/api/admin/services/status', async (req, res) =>
         io.emit('queue_updated', Services_Container);
 
         return res.status(200).json({
-            message: 'Status updated successfully',
-            service: updatedService
+          message: 'Status updated successfully',
+          service: updatedService
         });
       }
 
@@ -218,10 +218,7 @@ app.post('/api/admin/services', async (req, res) =>
 
     return res.status(201).json({ message: 'Service created successfully', service: newService });
   } 
-  catch (error) 
-  {
-    return res.status(500).json({ error: error.message });
-  }
+  catch (error) {  return res.status(500).json({ error: error.message });  }
 });
 
 app.put('/api/admin/services', async (req, res) => 
@@ -326,22 +323,19 @@ io.on('connection', (socket) =>
 
       if (queue_entry_id !== undefined && queue_entry_id !== null)
       {
-          targetIndex = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
+        targetIndex = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
       }
-      else
-      {
-          targetIndex = 0;
-      }
+      else targetIndex = 0;
 
       /* istanbul ignore else */
       if (targetIndex !== -1)
       {
-          servedClient = service.Queue_Array.splice(targetIndex, 1)[0];
-          service.queue_length = service.Queue_Array.length;
-          io.emit('queue_updated', Services_Container);
+        servedClient = service.Queue_Array.splice(targetIndex, 1)[0];
+        service.queue_length = service.Queue_Array.length;
+        io.emit('queue_updated', Services_Container);
 
-          const notifyPayload = (servedClient && servedClient.user_id) ? servedClient.user_id : servedClient;
-          notifyServed(notifyPayload, service.name);
+        const notifyPayload = (servedClient && servedClient.user_id) ? servedClient.user_id : servedClient;
+        notifyServed(notifyPayload, service.name);
       }
     }
   });
@@ -357,19 +351,16 @@ io.on('connection', (socket) =>
 
       if (queue_entry_id !== undefined && queue_entry_id !== null)
       {
-          targetIndex = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
+        targetIndex = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
       }
-      else
-      {
-          targetIndex = 0;
-      }
+      else targetIndex = 0;
 
       /* istanbul ignore else */
       if (targetIndex !== -1)
       {
-          service.Queue_Array.splice(targetIndex, 1);
-          service.queue_length = service.Queue_Array.length;
-          io.emit('queue_updated', Services_Container);
+        service.Queue_Array.splice(targetIndex, 1);
+        service.queue_length = service.Queue_Array.length;
+        io.emit('queue_updated', Services_Container);
       }
     }
   });
@@ -411,9 +402,9 @@ io.on('connection', (socket) =>
       /* istanbul ignore else */
       if (index !== -1) 
       {
-          service.Queue_Array.splice(index, 1);
-          service.queue_length = service.Queue_Array.length;
-          io.emit('queue_updated', Services_Container);
+        service.Queue_Array.splice(index, 1);
+        service.queue_length = service.Queue_Array.length;
+        io.emit('queue_updated', Services_Container);
       }
     }
   });
