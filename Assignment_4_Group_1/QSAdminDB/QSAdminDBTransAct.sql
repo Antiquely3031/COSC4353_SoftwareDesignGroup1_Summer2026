@@ -185,8 +185,6 @@ END;
 
 CREATE PROCEDURE DELETE_Service(IN targeted_service_id INT)
 BEGIN
-    DECLARE target_queue_id INT;
-
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -194,14 +192,6 @@ BEGIN
     END;
 
     START TRANSACTION;
-        -- Retrieve associated queue_id for explicit deletion
-        SELECT queue_id INTO target_queue_id 
-        FROM Queue 
-        WHERE service_id = targeted_service_id;
-
-        -- Delete targeted service and respective records
-        DELETE FROM QueueEntry WHERE queue_id = target_queue_id;
-        DELETE FROM Queue WHERE queue_id = target_queue_id;
         DELETE FROM Service WHERE service_id = targeted_service_id;
     COMMIT;
 END
