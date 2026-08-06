@@ -1,3 +1,4 @@
+-- Kevin created, Patrick updated to fit persistence and public accessibility with Railway
 CREATE DATABASE IF NOT EXISTS QueueSmartDB;
 USE QueueSmartDB;
 
