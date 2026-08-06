@@ -125,29 +125,50 @@ describe('POST /api/admin-login', () => {
       .send({ email: 'admin@test.com' });
   });
 
-  test('allows login for a promoted admin', async () => {
+  test('allow login for prompted admin', async () => {
     const res = await request(app)
       .post('/api/admin-login')
-      .send({ email: 'admin@test.com', password: 'adminpass123' });
-
+      .send({email: 'admin@test.com', password: 'adminpass123'});
     expect(res.statusCode).toBe(200);
     expect(res.body.role).toBe('Administrator');
   });
 
-  test('blocks a valid, non-admin user with 403', async () => {
+  test('block a valid, non-admin user with 403 code', async () => {
     const res = await request(app)
       .post('/api/admin-login')
-      .send({ email: 'patrick@test.com', password: 'testpass123' });
-
+      .send({email: 'patrick@test.com', password: 'testpass123'});
     expect(res.statusCode).toBe(403);
   });
 
-  test('rejects wrong password with 401, not 403', async () => {
+  test('reject incorrect password with 401', async () => {
     const res = await request(app)
       .post('/api/admin-login')
-      .send({ email: 'admin@test.com', password: 'wrongpass' });
-
+      .send({email: 'admin@test.com', password: 'wrongpass'});
     expect(res.statusCode).toBe(401);
+  });
+
+  test('rejects missing email or password', async () => {
+    const res = await request(app)
+      .post('/api/admin-login')
+      .send({email: 'admin@test.com'});
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toMatch(/required/i);
+  });
+
+  test('rejects invalid email formatting', async () => {
+    const res = await request(app)
+      .post('/api/admin-login')
+      .send({email: 'not-an-email', password: 'adminpass123'});
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toMatch(/valid email/i);
+  });
+
+  test('reject email that does not exist', async () => {
+    const res = await request(app)
+      .post('/api/admin-login')
+      .send({email: 'nobody@test.com', password: 'anypassword'});
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error).toMatch(/invalid/i);
   });
 });
 
@@ -283,3 +304,4 @@ describe('POST /api/reset-password', () => {
     expect(secondAttempt.statusCode).toBe(400);
   });
 });
+
