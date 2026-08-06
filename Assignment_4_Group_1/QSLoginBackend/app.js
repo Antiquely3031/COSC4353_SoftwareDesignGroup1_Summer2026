@@ -191,4 +191,9 @@ app.post('/api/reset-password', async (req, res) => {
   res.json({message: 'Password has successfully been reset.'});
 });
 
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err.message);
+  res.status(500).json({error: 'Something went wrong. Please try again later.'});
+});
+
 module.exports = app;
