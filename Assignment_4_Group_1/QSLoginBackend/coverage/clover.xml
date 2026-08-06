@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1785972493286" clover="3.2.0">
-  <project timestamp="1785972493286" name="All files">
+<coverage generated="1785979014675" clover="3.2.0">
+  <project timestamp="1785979014676" name="All files">
     <metrics statements="137" coveredstatements="128" conditionals="78" coveredconditionals="68" methods="18" coveredmethods="17" elements="233" coveredelements="213" complexity="0" loc="137" ncloc="137" packages="1" files="2" classes="2"/>
     <file name="app.js" path="C:\Users\patri\Documents\GitHub\COSC4353_SoftwareDesignGroup1_Summer2026\Assignment_4_Group_1\QSLoginBackend\app.js">
       <metrics statements="109" coveredstatements="100" conditionals="70" coveredconditionals="62" methods="9" coveredmethods="8"/>
