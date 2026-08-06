@@ -1,4 +1,4 @@
--- Kevin created the structure and table creations. Patrick modified to match persistent database and login/authentication specs.
+-- Kevin created, Patrick updated to fit persistence and public accessibility with Railway
 CREATE DATABASE IF NOT EXISTS QueueSmartDB;
 USE QueueSmartDB;
 
