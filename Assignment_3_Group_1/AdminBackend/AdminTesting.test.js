@@ -149,7 +149,7 @@ describe('Network Capabilities', () =>
 
   test('updates status for existing service', async () => 
   {
-    const updated = await Status_Changer(1, 'Open');
+    const updated = await Status_Changer(1, 'open');
     expect(updated).not.toBeNull();
     expect(updated.operation_status).toBe('open');
   });
@@ -167,7 +167,7 @@ describe('Network Capabilities', () =>
     {
       const response = await request(testServer)
         .patch('/api/admin/services/status')
-        .send({ service_id: 2, status: 'Closed' });
+        .send({ service_id: 2, status: 'closed' });
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('Status updated successfully');
@@ -188,7 +188,7 @@ describe('Network Capabilities', () =>
     {
       const response = await request(testServer)
         .patch('/api/admin/services/status')
-        .send({ service_id: 99999, status: 'Open' });
+        .send({ service_id: 99999, status: 'open' });
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Service not found.');

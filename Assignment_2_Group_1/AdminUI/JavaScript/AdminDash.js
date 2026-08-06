@@ -75,11 +75,11 @@ function Service_Status_Change(Action_Button)
 
     const SCB_Box = document.getElementById('selected-service-card') || document.body;
     const Service_Id = SCB_Box.dataset.selectedServiceId;
-    const Service_Status = Action_Button.target.textContent.trim();
+    let Service_Status = Action_Button.target.textContent.trim().toLowerCase();
 
     // Checks
     if (!(Service_Id && Service_Status !== SCB_Status.textContent.trim())) { return; }
-    if (Service_Status === "Deselect") 
+    if (Service_Status === "deselect") 
     {
         // Alter Modifications
         SCB_Name.textContent = "Select Service";
@@ -87,6 +87,8 @@ function Service_Status_Change(Action_Button)
         delete SCB_Box.dataset.selectedServiceId;
         return;
     }
+
+    if (Service_Status === 'close') Service_Status = 'closed';
 
     // Send to the Backend
     Operation_Status_Sender(Service_Id, Service_Status);
@@ -96,7 +98,7 @@ function Service_Status_Change(Action_Button)
     if (Listed_Button) 
     {
         const LS_Status = Listed_Button.querySelector('p:nth-child(3)');
-        if (LS_Status) LS_Status.textContent = Service_Status.toLowerCase();
+        if (LS_Status) LS_Status.textContent = Service_Status;
     }
-    SCB_Status.textContent = Service_Status.toLowerCase();
+    SCB_Status.textContent = Service_Status;
 }
