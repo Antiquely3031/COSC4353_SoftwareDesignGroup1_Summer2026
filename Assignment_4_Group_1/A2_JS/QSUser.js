@@ -53,8 +53,6 @@ async function setupJoinQueuePage() {
     joinQueueForm.addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
-
         if (!serviceSelect.value) {
             joinQueueMessage.textContent = "Please select a service before joining a queue.";
             return;
@@ -79,40 +77,30 @@ async function setupJoinQueuePage() {
                 return;
             }
 
-            const queueData = {
-                serviceId: data.serviceId,
-                serviceName: data.serviceName,
-                estimatedWait: data.estimatedWait,
-                position: data.position,
-                status: data.status,
-                joinedAt: new Date().toLocaleString()
-            };
-
-            localStorage.setItem("currentQueue", JSON.stringify(queueData));
+            if (window.QSNotify && typeof QSNotify.queueJoined === "function") {
+                QSNotify.queueJoined(data.serviceName);
+            }
 
             joinQueueMessage.textContent =
-                `You joined the ${queueData.serviceName} queue. ` +
-                `Your position is ${queueData.position}, and your estimated wait time is ${queueData.estimatedWait} minutes.`;
+                `You joined the ${data.serviceName} queue. ` +
+                `Your position is ${data.position}, and your estimated wait time is ${data.estimatedWait} minutes.`;
 
         } catch (error) {
             console.error("Error joining queue:", error);
             joinQueueMessage.textContent = "Unable to connect to the backend.";
         }
     });
-
     //leave queue button functionality
     if (leaveQueueButton) {
         //assuming user leaves instigate queue departure 
         leaveQueueButton.addEventListener("click", async () => {
             try {
                 const data = await leaveQueueFromDatabase();
-                localStorage.removeItem("currentQueue");
-
                 if (window.QSNotify && typeof QSNotify.left === "function") {
                     QSNotify.left(data.serviceName);
                 }
-
-                addHistoryRecord(data.serviceName, "Canceled");
+                //old call that is for local storage transition to backend
+                //addHistoryRecord(data.serviceName, "Canceled");
                 joinQueueMessage.textContent = `Left the ${data.serviceName} queue.`;
 
                 selectedService.textContent = "None selected";
@@ -144,7 +132,6 @@ async function setupDashboardPage() {
         if (queueStatus) queueStatus.textContent = currentQueue.status;
     }
 }
-
 //queue status page
 async function setupQueueStatusPage() {
     const currentQueue = getCurrentQueue();
@@ -161,7 +148,7 @@ async function setupQueueStatusPage() {
         const data = await response.json();
 
         if (!response.ok) {
-            if(statusMessage) {
+            if (statusMessage) {
                 statusMessage.innerHTML = data.error || "Unable to load queue status";
             }
             if (queueStatusCard) {
@@ -176,7 +163,7 @@ async function setupQueueStatusPage() {
         if (waitTime) waitTime.textContent = `${data.estimatedWait} minutes`;
         if (queueStatus) queueStatus.textContent = data.status;
 
-    } 
+    }
     catch (error) {
         console.error("Error loading queue status:", error);
         if (statusMessage) {
@@ -225,9 +212,8 @@ async function setupQueueStatusPage() {
         });
     }
 }
-
 //queue history page
-function setupHistoryPage() {
+async function setupHistoryPage() {
     const historyListBody = document.getElementById("historyListBody");
 
     const summaryTotal = document.getElementById("summaryTotal");
@@ -241,126 +227,156 @@ function setupHistoryPage() {
         return;
     }
 
-    const history = getHistory();
+    try {
+        const response = await fetch(`${baseAPI}/queue/history/${userID}`);
+        const history = await response.json();
 
-    historyListBody.innerHTML = "";
+        if (!response.ok) {
+            throw new Error(history.error || "Failed to load history.");
+        }
 
-    if (history.length === 0) {
+        historyListBody.innerHTML = "";
+
+        if (history.length === 0) {
+            historyListBody.innerHTML = `
+                <div class="history-row">
+                    <span>No queue history available.</span>
+                    <span>--</span>
+                    <span>--</span>
+                    <span>--</span>
+                </div>
+            `;
+
+            if (summaryTotal) summaryTotal.textContent = 0;
+            if (summaryServed) summaryServed.textContent = 0;
+            if (summaryCanceled) summaryCanceled.textContent = 0;
+            if (summaryNoShow) summaryNoShow.textContent = 0;
+
+            return;
+        }
+
+        let servedCount = 0;
+        let canceledCount = 0;
+        let noShowCount = 0;
+
+        history.forEach(record => {
+            const status = record.status || "unknown";
+            const statusLower = status.toLowerCase();
+
+            let statusClass = "waiting";
+
+            if (statusLower === "served" || statusLower === "completed") {
+                servedCount++;
+                statusClass = "completed";
+            }
+
+            if (statusLower === "canceled" || statusLower === "cancelled") {
+                canceledCount++;
+                statusClass = "canceled";
+            }
+
+            if (statusLower === "no show") {
+                noShowCount++;
+                statusClass = "no-show";
+            }
+
+            const joinedDate = record.join_time ? new Date(record.join_time) : null;
+            const date = joinedDate ? joinedDate.toLocaleDateString() : "--";
+            const time = joinedDate ? joinedDate.toLocaleTimeString() : "--";
+
+            const row = document.createElement("div");
+            row.classList.add("history-row");
+
+            row.innerHTML = `
+                <span>${record.service_name}</span>
+                <span>${date}</span>
+                <span>${time}</span>
+                <span class="outcome ${statusClass}">
+                    ${status}
+                </span>
+            `;
+
+            historyListBody.appendChild(row);
+        });
+
+        if (summaryTotal) summaryTotal.textContent = history.length;
+        if (summaryServed) summaryServed.textContent = servedCount;
+        if (summaryCanceled) summaryCanceled.textContent = canceledCount;
+        if (summaryNoShow) summaryNoShow.textContent = noShowCount;
+
+    } catch (error) {
+        console.error("Error loading queue history:", error);
+
         historyListBody.innerHTML = `
             <div class="history-row">
-                <span>No queue history available.</span>
+                <span>Unable to load queue history.</span>
                 <span>--</span>
                 <span>--</span>
                 <span>--</span>
             </div>
         `;
-
-        if (summaryTotal) summaryTotal.textContent = 0;
-        if (summaryServed) summaryServed.textContent = 0;
-        if (summaryCanceled) summaryCanceled.textContent = 0;
-        if (summaryNoShow) summaryNoShow.textContent = 0;
-
-        return;
     }
-
-    let servedCount = 0;
-    let canceledCount = 0;
-    let noShowCount = 0;
-
-    history.forEach(record => {
-        if (record.status.toLowerCase() === "served" || record.status.toLowerCase() === "completed") {
-            servedCount++;
-        }
-
-        if (record.status.toLowerCase() === "canceled" || record.status.toLowerCase() === "cancelled") {
-            canceledCount++;
-        }
-
-        if (record.status.toLowerCase() === "no show") {
-            noShowCount++;
-        }
-
-        const row = document.createElement("div");
-        row.classList.add("history-row");
-
-        row.innerHTML = `
-            <span>${record.serviceName}</span>
-            <span>${record.date}</span>
-            <span>${record.time}</span>
-            <span class="outcome ${record.statusClass}">
-                ${record.status}
-            </span>
-        `;
-
-        historyListBody.appendChild(row);
-    });
-
-    if (summaryTotal) summaryTotal.textContent = history.length;
-    if (summaryServed) summaryServed.textContent = servedCount;
-    if (summaryCanceled) summaryCanceled.textContent = canceledCount;
-    if (summaryNoShow) summaryNoShow.textContent = noShowCount;
 }
 //Helper functions
-function getCurrentQueue() {
-    const queueData = localStorage.getItem("currentQueue");
+// function getCurrentQueue() {
+//     const queueData = localStorage.getItem("currentQueue");
 
-    if (!queueData) {
-        return null;
-    }
-    return JSON.parse(queueData);
-}
-function addHistoryRecord(serviceName, status) {
-    const history = getHistory();
+//     if (!queueData) {
+//         return null;
+//     }
+//     return JSON.parse(queueData);
+// }
+// function addHistoryRecord(serviceName, status) {
+//     const history = getHistory();
 
-    const now = new Date();
-    //default value
-    let statusClass = "completed";
+//     const now = new Date();
+//     //default value
+//     let statusClass = "completed";
 
-    if (status.toLowerCase() === "canceled") {
-        statusClass = "canceled";
-    }
-    if (status.toLowerCase() === "no show") {
-        statusClass = "no-show";
-    }
+//     if (status.toLowerCase() === "canceled") {
+//         statusClass = "canceled";
+//     }
+//     if (status.toLowerCase() === "no show") {
+//         statusClass = "no-show";
+//     }
 
-    history.unshift({
-        serviceName: serviceName,
-        date: now.toLocaleDateString(),
-        time: now.toLocaleTimeString(),
-        status: status,
-        statusClass: statusClass
-    });
-    localStorage.setItem("queueHistory", JSON.stringify(history));
-}
+//     history.unshift({
+//         serviceName: serviceName,
+//         date: now.toLocaleDateString(),
+//         time: now.toLocaleTimeString(),
+//         status: status,
+//         statusClass: statusClass
+//     });
+//     localStorage.setItem("queueHistory", JSON.stringify(history));
+// }
+// function getHistory() {
+//     const history = localStorage.getItem("queueHistory");
 
-function getHistory() {
-    const history = localStorage.getItem("queueHistory");
+//     if (!history) {
+//         return [];
+//     }
 
-    if (!history) {
-        return [];
-    }
+//     return JSON.parse(history);
+// }
+// function getNextQueuePosition(serviceId) {
+//     const queueCounts = JSON.parse(localStorage.getItem("queueCounts")) || {};
+//     if (!queueCounts[serviceId]) {
+//         queueCounts[serviceId] = 0;
+//     }
+//     queueCounts[serviceId]++;
+//     localStorage.setItem("queueCounts", JSON.stringify(queueCounts));
 
-    return JSON.parse(history);
-}
-function getNextQueuePosition(serviceId) {
-    const queueCounts = JSON.parse(localStorage.getItem("queueCounts")) || {};
-    if (!queueCounts[serviceId]) {
-        queueCounts[serviceId] = 0;
-    }
-    queueCounts[serviceId]++;
-    localStorage.setItem("queueCounts", JSON.stringify(queueCounts));
+//     return queueCounts[serviceId];
+// }
+// function decreaseQueueCount(serviceId) {
+//     const queueCounts = JSON.parse(localStorage.getItem("queueCounts")) || {};
 
-    return queueCounts[serviceId];
-}
-function decreaseQueueCount(serviceId) {
-    const queueCounts = JSON.parse(localStorage.getItem("queueCounts")) || {};
+//     if (queueCounts[serviceId] && queueCounts[serviceId] > 0) {
+//         queueCounts[serviceId]--;
+//     }
 
-    if (queueCounts[serviceId] && queueCounts[serviceId] > 0) {
-        queueCounts[serviceId]--;
-    }
-
-    localStorage.setItem("queueCounts", JSON.stringify(queueCounts));
-}
+//     localStorage.setItem("queueCounts", JSON.stringify(queueCounts));
+// }
 // this section is added to assist in integrating the
 async function loadServicesDropdown() {
     const serviceSelect = document.getElementById("serviceSelect");
