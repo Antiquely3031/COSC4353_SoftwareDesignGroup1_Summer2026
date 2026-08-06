@@ -1,4 +1,3 @@
--- Kevin created the structure and table creations. Patrick modified to match persistent database and login/authentication specs.
 CREATE DATABASE IF NOT EXISTS QueueSmartDB;
 USE QueueSmartDB;
 
