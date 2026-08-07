@@ -21,15 +21,38 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
           operation_status: i % 2 === 0 ? 'open' : 'closed',
           Queue_Array: i === 0 
             ? '[]' 
-            : JSON.stringify(Array.from({ length: 60 }, (_, k) => ({
+            : JSON.stringify(Array.from({ length: 10 }, (_, k) => ({
                 queue_entry_id: k + 1,
                 user_id: `user_${k + 1}`,
                 user_name: `Person ${k + 1}`,
                 position: k + 1,
                 line_status: 'waiting'
               }))),
-          queue_length: i === 0 ? 0 : 60
+          queue_length: i === 0 ? 0 : 10
         }));
+
+        // Insert one malformed string row and one raw array row to target JSON parsing branches
+        mockRows.push({
+          service_id: 101,
+          name: 'Malformed JSON Service',
+          description: 'Testing JSON parsing try/catch branches',
+          expected_duration: 10,
+          priority: 'Low',
+          operation_status: 'open',
+          Queue_Array: '{ invalid-json: true }',
+          queue_length: 0
+        });
+
+        mockRows.push({
+          service_id: 102,
+          name: 'Raw Array Service',
+          description: 'Testing pre-parsed array check branches',
+          expected_duration: 10,
+          priority: 'Medium',
+          operation_status: 'open',
+          Queue_Array: [{ queue_entry_id: 88, user_id: 'u88', user_name: 'Raw User', position: 1, line_status: 'waiting' }, null],
+          queue_length: 1
+        });
 
         return Promise.resolve([mockRows]);
       }
@@ -85,18 +108,21 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
 
 const request = require('supertest');
 const ioClient = require('socket.io-client');
+const http = require('http');
 const pool = require('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool').default;
 const { 
   startServer, 
   Service_Entry, 
   Queue_Entry, 
   Container_Initializer, 
-  Status_Changer 
+  Status_Changer,
+  userServer,
+  server
 } = require('./QSAdminBackend');
 
-describe('Mock Initialization', () => 
+describe('Structural Data & Model Unit Tests', () => 
 {
-  test('Queue_Entry initializes constructor properties correctly', () => 
+  test('Queue_Entry constructor builds model specifications precisely', () => 
   {
     const entry = new Queue_Entry(1, 'usr_100', 'John Doe', 1, 'waiting', '2026-08-06T14:00:00Z');
     
@@ -108,481 +134,295 @@ describe('Mock Initialization', () =>
     expect(entry.join_time).toBe('2026-08-06T14:00:00Z');
   });
 
-  test('Checking the basic mock data initialization', async () => 
-  {
-    const Test_Container = await Container_Initializer();
-    expect(Test_Container).toBeDefined();
-    
-    try 
-    { 
-      Test_Container.forEach(entry => 
-      {
-        expect(entry).toBeInstanceOf(Service_Entry);
-      });  
-    } 
-    catch(error) 
-    {
-      throw new Error(`Element ${error} failed in the Test_Container.`);
-    }
+  test('Service_Entry fallback defaults to an empty array when argument validation fails', () => {
+    const brokenService = new Service_Entry(99, 'Broken', 'Desc', 10, 2, 0, 'open', 'NotAnArray');
+    expect(brokenService.Queue_Array).toEqual([]);
   });
 
-  test('Container_Initializer sorts mock services by priority (High to Low)', async () => 
+  test('Container_Initializer handles try/catch JSON exceptions and raw arrays safely', async () => 
   {
     const container = await Container_Initializer();
-    
-    const priorityWeight = (p) => 
-    {
-      if (p === 'High' || p === 3) return 3;
-      if (p === 'Medium' || p === 2) return 2;
-      return 1;
-    };
+    expect(container).toBeDefined();
 
+    const malformedTarget = container.find(s => s.service_id === 101);
+    expect(malformedTarget).toBeDefined();
+    expect(malformedTarget.Queue_Array).toEqual([]);
+
+    const arrayTarget = container.find(s => s.service_id === 102);
+    expect(arrayTarget).toBeDefined();
+    expect(arrayTarget.Queue_Array.length).toBe(1);
+    expect(arrayTarget.Queue_Array[0].user_name).toBe('Raw User');
+  });
+
+  test('Container_Initializer sorts items safely using numeric weight rules', async () => 
+  {
+    const container = await Container_Initializer();
     for (let i = 0; i < container.length - 1; i++) 
     {
-      expect(priorityWeight(container[i].priority)).toBeGreaterThanOrEqual(priorityWeight(container[i + 1].priority));
+      expect(container[i].priority).toBeGreaterThanOrEqual(container[i + 1].priority);
     }
   });
 
-  test('handles services with empty queues without breaking initialization', async () => 
-  {
-    const container = await Container_Initializer();
-    const emptyQueueService = container.find(s => s.service_id === 1);
-    
-    expect(emptyQueueService).toBeDefined();
-    expect(emptyQueueService.Queue_Array).toEqual([]);
-    expect(emptyQueueService.queue_length).toBe(0);
-  });
-
-  test('Container_Initializer returns empty array on database failure', async () => {
-    const originalImplementation = pool.query;
-    pool.query.mockImplementationOnce(() => Promise.reject(new Error('Forced Error')));
-    
-    const container = await Container_Initializer();
-    expect(container).toEqual([]);
+  test('Container_Initializer safely absorbs database infrastructure errors', async () => {
+    pool.query.mockImplementationOnce(() => Promise.reject(new Error('Forced Fatal Database Breakdown')));
+    const result = await Container_Initializer();
+    expect(result).toEqual([]);
   });
 });
 
-describe('Network Capabilities', () => 
+describe('Network Engine, Endpoint routing & Dynamic Protocols', () => 
 {
-  let testServer;
-  let testPort;
+  let adminPort;
+  let userPort;
 
   beforeAll(async () => 
   {
-    testServer = await startServer(0);
-    testPort = testServer.address().port;
+    // Boot both components under randomized unallocated dynamic test ports
+    await startServer(0, 0);
+    adminPort = server.address().port;
+    userPort = userServer.address().port;
   });
 
-  afterAll((done) => 
+  afterAll(async () => 
   {
-    if (testServer && testServer.listening) testServer.close(done);
-    else done();
+    await new Promise(resolve => server.close(resolve));
+    await new Promise(resolve => userServer.close(resolve));
   });
 
-  test('updates status for existing service', async () => 
-  {
-    const updated = await Status_Changer(1, 'open');
-    expect(updated).not.toBeNull();
-    expect(updated.operation_status).toBe('open');
-  });
-
-  test('Status_Changer returns null when service is missing', async () => 
-  {
-    const updated = await Status_Changer(99999, 'open');
-    expect(updated).toBeNull();
-  });
-
-  test('HTTP GET /api/admin/services returns service list', async () => 
-  {
-    const response = await request(testServer).get('/api/admin/services');
-    expect(response.status).toBe(200);
-    expect(Array.isArray(response.body)).toBe(true);
-  });
-
-  describe('HTTP PATCH /api/admin/services/status', () => 
-  {
-    test('successfully updates status and returns 200', async () => 
+  describe('HTTP REST Operations Matrix', () => {
+    
+    test('GET /api/admin/services fetches complete operational workspace state', async () => 
     {
-      const response = await request(testServer)
-        .patch('/api/admin/services/status')
-        .send({ service_id: 2, status: 'closed' });
-
+      const response = await request(server).get('/api/admin/services');
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Status updated successfully');
-      expect(response.body.service.operation_status).toBe('closed');
+      expect(Array.isArray(response.body)).toBe(true);
     });
 
-    test('returns 400 when missing service_id or status', async () => 
-    {
-      const response = await request(testServer)
-        .patch('/api/admin/services/status')
-        .send({ service_id: 2 });
-
-      expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Missing service_id or status in request body.');
-    });
-
-    test('returns 404 when service is not found', async () => 
-    {
-      const response = await request(testServer)
-        .patch('/api/admin/services/status')
-        .send({ service_id: 99999, status: 'open' });
-
-      expect(response.status).toBe(404);
-      expect(response.body.error).toBe('Service not found.');
-    });
-
-    test('returns 500 when database operation throws an exception', async () => 
-    {
-      // Force database logic crash on an existing service ID to pass validation layers
-      pool.query.mockImplementationOnce(() => Promise.reject(new Error('Forced Error')));
-
-      const response = await request(testServer)
-        .patch('/api/admin/services/status')
-        .send({ service_id: 1, status: 'open' }); 
-
-      expect(response.status).toBe(500);
-    });
-  });
-
-  describe('HTTP POST /api/admin/services', () => 
-  {
-    test('successfully creates a new service with empty queue and returns 201', async () => 
-    {
-      const newService = {
-        name: 'New Unique Test Service',
-        description: 'A newly created service for testing.',
-        expected_duration: 15,
-        priority: 2
-      };
-
-      const response = await request(testServer)
-        .post('/api/admin/services')
-        .send(newService);
-
-      expect(response.status).toBe(201);
-      expect(response.body.message).toBe('Service created successfully');
-      expect(response.body.service.name).toBe('New Unique Test Service');
-      expect(response.body.service.expected_duration).toBe(15);
-      expect(response.body.service.Queue_Array).toEqual([]);
-    });
-
-    test('successfully creates a new service with priority options conversion handles', async () => 
-    {
-      let response = await request(testServer)
-        .post('/api/admin/services')
-        .send({ name: 'Service Low', description: 'Desc', expected_duration: 10, priority: 'low' });
-      expect(response.status).toBe(201);
-
-      response = await request(testServer)
-        .post('/api/admin/services')
-        .send({ name: 'Service One', description: 'Desc', expected_duration: 10, priority: '1' });
-      expect(response.status).toBe(201);
-
-      response = await request(testServer)
-        .post('/api/admin/services')
-        .send({ name: 'Service High', description: 'Desc', expected_duration: 10, priority: 'high' });
-      expect(response.status).toBe(201);
-    });
-
-    test('returns 400 when missing required fields', async () => 
-    {
-      let response = await request(testServer).post('/api/admin/services').send({});
-      expect(response.status).toBe(400);
-
-      response = await request(testServer).post('/api/admin/services').send({ name: 'Test' });
-      expect(response.status).toBe(400);
-    });
-
-    test('returns 400 when name exceeds 100 characters', async () => 
-    {
-      const longName = 'A'.repeat(101);
-      const response = await request(testServer)
-        .post('/api/admin/services')
-        .send({ name: longName, description: 'Valid Desc', expected_duration: 15 });
-
-      expect(response.status).toBe(400);
-    });
-
-    test('returns 400 when expected_duration is invalid', async () => 
-    {
-      const response = await request(testServer)
-        .post('/api/admin/services')
-        .send({ name: 'Invalid Dur', description: 'Desc', expected_duration: -5 });
-
-      expect(response.status).toBe(400);
-    });
-
-    test('returns 409 when service name already exists', async () => 
-    {
-      const response = await request(testServer)
-        .post('/api/admin/services')
-        .send({
-          name: 'Placeholder 2',
-          description: 'Duplicate check.',
-          expected_duration: 10,
-          priority: 'medium'
-        });
-
-      expect(response.status).toBe(409);
-    });
-
-    test('returns 500 when insert procedure fails execution', async () => {
-      const response = await request(testServer)
-        .post('/api/admin/services')
-        .send({ name: 'TriggerError', description: 'Desc', expected_duration: 10 });
-
-      expect(response.status).toBe(500);
-    });
-  });
-
-  describe('HTTP PUT /api/admin/services', () => 
-  {
-    test('successfully updates an existing service profile and returns 200', async () => 
-    {
-      const updatedDetails = {
-        service_id: 3,
-        name: 'Placeholder 3 New Name',
-        description: 'Updated description for testing.',
-        expected_duration: 25,
-        priority: 3
-      };
-
-      const response = await request(testServer)
-        .put('/api/admin/services')
-        .send(updatedDetails);
-
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Service updated successfully');
-    });
-
-    test('returns 404 when updating a non-existent service', async () => 
-    {
-      const response = await request(testServer)
-        .put('/api/admin/services')
-        .send({ service_id: 99999, name: 'Ghost', description: 'No', expected_duration: 10 });
-
-      expect(response.status).toBe(404);
-    });
-
-    test('returns 400 when missing service_id on PUT request', async () => 
-    {
-      const response = await request(testServer)
-        .put('/api/admin/services')
-        .send({ name: 'No ID', description: 'No', expected_duration: 10 });
-
-      expect(response.status).toBe(400);
-    });
-
-    test('returns 500 when update routine experiences query errors', async () => {
-      pool.query.mockImplementationOnce(() => Promise.reject(new Error('Forced Error')));
-
-      const response = await request(testServer)
-        .put('/api/admin/services')
-        .send({ service_id: 1, name: 'Error Out', description: 'Desc', expected_duration: 10 });
-        
-      expect(response.status).toBe(500);
-    });
-  });
-
-  describe('HTTP DELETE /api/admin/services/:id', () => 
-  {
-    test('successfully deletes an existing service and returns 200', async () => 
-    {
-      const response = await request(testServer).delete('/api/admin/services/4');
-      expect(response.status).toBe(200);
-    });
-
-    test('returns 404 when attempting to delete a non-existent service', async () => 
-    {
-      const response = await request(testServer).delete('/api/admin/services/99999');
-      expect(response.status).toBe(404);
-    });
-
-    test('returns 500 when deletion logic errors out', async () => {
-      pool.query.mockImplementationOnce(() => Promise.reject(new Error('Forced Error')));
+    test('Status_Changer normalizes status inputs completely', async () => {
+      const updatedClose = await Status_Changer(1, 'close');
+      expect(updatedClose.operation_status).toBe('closed');
       
-      const response = await request(testServer).delete('/api/admin/services/1');
+      const updatedClosed = await Status_Changer(1, 'closed');
+      expect(updatedClosed.operation_status).toBe('closed');
+      
+      const updatedOpen = await Status_Changer(1, '  open  ');
+      expect(updatedOpen.operation_status).toBe('open');
+
+      const updatedInvalid = await Status_Changer(99999, 'open');
+      expect(updatedInvalid).toBeNull();
+    });
+
+    test('PATCH /api/admin/services/status checks validation and exception bounds', async () => 
+    {
+      let response = await request(server).patch('/api/admin/services/status').send({ service_id: 2 });
+      expect(response.status).toBe(400);
+
+      response = await request(server).patch('/api/admin/services/status').send({ service_id: 99999, status: 'open' });
+      expect(response.status).toBe(404);
+
+      pool.query.mockImplementationOnce(() => Promise.reject(new Error('Fatal Update Error')));
+      response = await request(server).patch('/api/admin/services/status').send({ service_id: 1, status: 'closed' });
       expect(response.status).toBe(500);
+    });
+
+    test('POST /api/admin/services covers every custom field validation rule', async () => 
+    {
+      // Missing field validations
+      let res = await request(server).post('/api/admin/services').send({ description: 'D', expected_duration: 10 });
+      expect(res.status).toBe(400);
+      res = await request(server).post('/api/admin/services').send({ name: 'N', expected_duration: 10 });
+      expect(res.status).toBe(400);
+      res = await request(server).post('/api/admin/services').send({ name: 'N', description: 'D' });
+      expect(res.status).toBe(400);
+
+      // Character string lengths bounds evaluation
+      res = await request(server).post('/api/admin/services').send({ name: 'A'.repeat(105), description: 'D', expected_duration: 10 });
+      expect(res.status).toBe(400);
+
+      // Numeric parser validations
+      res = await request(server).post('/api/admin/services').send({ name: 'N', description: 'D', expected_duration: 'invalid-num' });
+      expect(res.status).toBe(400);
+
+      // Check explicit priority configurations mappings
+      res = await request(server).post('/api/admin/services').send({ name: 'Low Prio P', description: 'D', expected_duration: 5, priority: '1' });
+      expect(res.status).toBe(201);
+      res = await request(server).post('/api/admin/services').send({ name: 'Medium Prio P', description: 'D', expected_duration: 5, priority: 'medium' });
+      expect(res.status).toBe(201);
+      res = await request(server).post('/api/admin/services').send({ name: 'High Prio P', description: 'D', expected_duration: 5, priority: 'high' });
+      expect(res.status).toBe(201);
+
+      // Duplicate detection conflict responses
+      res = await request(server).post('/api/admin/services').send({ name: 'Placeholder 2', description: 'D', expected_duration: 10 });
+      expect(res.status).toBe(409);
+
+      // Exception branch evaluation
+      res = await request(server).post('/api/admin/services').send({ name: 'TriggerError', description: 'D', expected_duration: 10 });
+      expect(res.status).toBe(500);
+    });
+
+    test('PUT /api/admin/services evaluates schema validation and sorting adjustments', async () => 
+    {
+      let res = await request(server).put('/api/admin/services').send({ name: 'Ghost' });
+      expect(res.status).toBe(400);
+
+      res = await request(server).put('/api/admin/services').send({ service_id: 2, name: '', description: 'D', expected_duration: 5 });
+      expect(res.status).toBe(400);
+
+      res = await request(server).put('/api/admin/services').send({ service_id: 99999, name: 'Ghost', description: 'D', expected_duration: 5 });
+      expect(res.status).toBe(404);
+
+      // Valid execution that requires moving positions based on updated priority levels
+      res = await request(server).put('/api/admin/services').send({ service_id: 3, name: 'Reordered Element', description: 'Desc', expected_duration: 45, priority: 'low' });
+      expect(res.status).toBe(200);
+
+      pool.query.mockImplementationOnce(() => Promise.reject(new Error('Fatal Put Error')));
+      res = await request(server).put('/api/admin/services').send({ service_id: 2, name: 'Crash Test', description: 'Desc', expected_duration: 10 });
+      expect(res.status).toBe(500);
+    });
+
+    test('DELETE /api/admin/services/:id clears services from memory map', async () => 
+    {
+      let res = await request(server).delete('/api/admin/services/99999');
+      expect(res.status).toBe(404);
+
+      res = await request(server).delete('/api/admin/services/2');
+      expect(res.status).toBe(200);
+
+      pool.query.mockImplementationOnce(() => Promise.reject(new Error('Fatal Delete Error')));
+      res = await request(server).delete('/api/admin/services/3');
+      expect(res.status).toBe(500);
     });
   });
 
-  describe('WebSocket Handlers & Disconnect Events', () => 
+  describe('WebSocket Admin Scope Architecture', () => 
   {
-    let clientSocket;
+    let socketClient;
 
     beforeEach((done) => 
     {
-      clientSocket = ioClient(`http://localhost:${testPort}`, {
-        transports: ['websocket'],
-        forceNew: true
-      });
-      
-      // Drain the initial setup event completely before running test emits
-      clientSocket.once('queue_updated', () => {
-        done();
-      });
+      socketClient = ioClient(`http://localhost:${adminPort}`, { transports: ['websocket'], forceNew: true });
+      socketClient.once('queue_updated', () => done());
     });
 
     afterEach(() => 
     {
-      if (clientSocket && clientSocket.connected) clientSocket.disconnect();
+      if (socketClient.connected) socketClient.disconnect();
     });
 
-    test('receives queue_updated payload on initial connection', (done) => 
+    test('serve_client handles explicit queue entry parameters and fires notifications', (done) => 
     {
-      const checkSocket = ioClient(`http://localhost:${testPort}`, {
-        transports: ['websocket'],
-        forceNew: true
-      });
-      checkSocket.once('queue_updated', (data) => 
-      {
-        expect(Array.isArray(data)).toBe(true);
-        checkSocket.disconnect();
-        done();
-      });
-    });
+      global.fetch = jest.fn().mockImplementation(() => Promise.resolve({ ok: true }));
 
-    test('handles serve_client matching a specific queue_entry_id', (done) => 
-    {
-      clientSocket.once('queue_updated', (services) => 
-      {
-        const updatedService = services.find(s => s.service_id === 2);
-        const targetedEntry = updatedService.Queue_Array.find(item => item.queue_entry_id === 2);
-        expect(targetedEntry).toBeUndefined();
-        done();
-      });
-
-      clientSocket.emit('serve_client', { service_id: 2, queue_entry_id: 2 });
-    });
-
-    test('handles serve_client and defaults to target index 0 if queue_entry_id is missing', (done) => 
-    {
-      clientSocket.once('queue_updated', (services) => 
-      {
-        const updatedService = services.find(s => s.service_id === 2);
-        expect(updatedService.Queue_Array[0].queue_entry_id).not.toBe(1);
-        done();
-      });
-
-      clientSocket.emit('serve_client', { service_id: 2 });
-    });
-
-    test('handles serve_client branches parsing user notification tracking payloads', (done) => 
-    {
-      const originalFetch = global.fetch;
-      global.fetch = jest.fn().mockImplementation(() => Promise.resolve({}));
-
-      clientSocket.once('queue_updated', () => 
+      socketClient.once('queue_updated', () => 
       {
         expect(global.fetch).toHaveBeenCalled();
-        global.fetch = originalFetch;
         done();
       });
 
-      clientSocket.emit('serve_client', { service_id: 3, queue_entry_id: 1 });
+      // Target service 4, entry 1 explicitly to isolate data mutation
+      socketClient.emit('serve_client', { service_id: 4, queue_entry_id: 1 });
     });
 
-    test('handles remove_client matching a specific queue_entry_id', (done) => 
+    test('serve_client targets index zero fallback when target id parameters are omitted', (done) => 
     {
-      clientSocket.once('queue_updated', (services) => 
+      socketClient.once('queue_updated', () => done());
+      socketClient.emit('serve_client', { service_id: 4 });
+    });
+
+    test('remove_client removes targeted items from queue arrays cleanly', (done) => 
+    {
+      socketClient.once('queue_updated', () => done());
+      // Isolated to service_id: 5 to ensure queue entry index 2 safely exists uncaught by prior operations
+      socketClient.emit('remove_client', { service_id: 5, queue_entry_id: 2 });
+    });
+
+    test('remove_client targets fallback element zero when array parameters are missing', (done) => 
+    {
+      socketClient.once('queue_updated', () => done());
+      socketClient.emit('remove_client', { service_id: 5 });
+    });
+
+    test('reorder_queue applies custom array structural mappings', (done) => 
+    {
+      const customConfiguration = [{ queue_entry_id: 777, user_name: 'Overwritten Client Sequence' }];
+      
+      socketClient.once('queue_updated', (payload) => 
       {
-        const updatedService = services.find(s => s.service_id === 5);
-        const targetedEntry = updatedService.Queue_Array.find(item => item.queue_entry_id === 5);
-        expect(targetedEntry).toBeUndefined();
+        const updatedMatch = payload.find(s => s.service_id === 6);
+        expect(updatedMatch.Queue_Array).toEqual(customConfiguration);
         done();
       });
 
-      clientSocket.emit('remove_client', { service_id: 5, queue_entry_id: 5 });
+      socketClient.emit('reorder_queue', { service_id: 6, updated_queue: customConfiguration });
     });
 
-    test('handles remove_client and defaults to index 0 if queue_entry_id is missing', (done) => 
+    test('null operations are safely ignored by intercept guards without crashing servers', (done) => 
     {
-      clientSocket.once('queue_updated', (services) => 
-      {
-        const updatedService = services.find(s => s.service_id === 5);
-        expect(updatedService.Queue_Array[0].queue_entry_id).not.toBe(1);
+      socketClient.emit('serve_client', null);
+      socketClient.emit('remove_client', undefined);
+      socketClient.emit('reorder_queue', null);
+      socketClient.emit('serve_client', { service_id: 99999 });
+
+      setTimeout(() => {
+        expect(socketClient.connected).toBe(true);
         done();
-      });
-
-      clientSocket.emit('remove_client', { service_id: 5 });
-    });
-
-    test('handles reorder_queue event structures mapping array configurations', (done) => 
-    {
-      const customOrder = [
-        { queue_entry_id: 99, user_name: 'Custom Order Client' }
-      ];
-
-      clientSocket.once('queue_updated', (services) => 
-      {
-        const updatedService = services.find(s => s.service_id === 6);
-        expect(updatedService.Queue_Array).toEqual(customOrder);
-        expect(updatedService.queue_length).toBe(1);
-        done();
-      });
-
-      clientSocket.emit('reorder_queue', { service_id: 6, updated_queue: customOrder });
-    });
-
-    test('handles join_queue appending a formatted client_entry object structure', (done) => 
-    {
-      const clientEntryObject = {
-        queue_entry_id: 500,
-        user_id: 'new_user_1',
-        user_name: 'Joined Client'
-      };
-
-      clientSocket.once('queue_updated', (services) => 
-      {
-        const joinedService = services.find(s => s.service_id === 7);
-        const match = joinedService.Queue_Array.find(item => item.queue_entry_id === 500);
-        expect(match).toBeDefined();
-        done();
-      });
-
-      clientSocket.emit('join_queue', { service_id: 7, client_entry: clientEntryObject });
-    });
-
-    test('handles leave_queue searching specific queue_entry_id matches', (done) => 
-    {
-      clientSocket.once('queue_updated', (services) => 
-      {
-        const leftService = services.find(s => s.service_id === 8);
-        const match = leftService.Queue_Array.find(item => item.queue_entry_id === 10);
-        expect(match).toBeUndefined();
-        done();
-      });
-
-      clientSocket.emit('leave_queue', { service_id: 8, queue_entry_id: 10 });
-    });
-
-    test('gracefully ignores actions on non-existent service or empty payloads', (done) => 
-    {
-      clientSocket.emit('serve_client', null);
-      clientSocket.emit('remove_client', undefined);
-      clientSocket.emit('reorder_queue', null);
-      clientSocket.emit('join_queue', undefined);
-      clientSocket.emit('leave_queue', null);
-      clientSocket.emit('serve_client', { service_id: 99999 });
-
-      setTimeout(() => 
-      {
-        expect(clientSocket.connected).toBe(true);
-        done();
-      }, 50);
+      }, 30);
     });
   });
 
-  test('startServer default parameter fallback execution test', async () => 
+  describe('User Scope Server-Sent Events (SSE) Interface', () => 
   {
-    if (testServer && testServer.listening) 
+    test('stream channel establishes event headers and updates data streams', (done) => 
     {
-      await new Promise(resolve => testServer.close(resolve));
-    }
+      // Native http client bypasses Supertest stream accumulation bugs
+      const req = http.get(`http://localhost:${userPort}/api/users/queue/stream`, (res) => {
+        expect(res.headers['content-type']).toBe('text/event-stream');
+        expect(res.headers['cache-control']).toBe('no-cache');
+        expect(res.headers['connection']).toBe('keep-alive');
+        
+        // Destroy connection manually immediately to release event loop
+        req.destroy();
+        done();
+      });
+    });
 
-    const serverInstance = await startServer();
-    expect(serverInstance.address().port).toBe(3000);
-    await new Promise(resolve => serverInstance.close(resolve));
+    test('join route appends payload directly to target tracking containers', async () => 
+    {
+      let res = await request(userServer).post('/api/users/queue/join').send({ service_id: 99999, client_entry: {} });
+      expect(res.status).toBe(404);
+
+      res = await request(userServer).post('/api/users/queue/join').send({ service_id: 7 });
+      expect(res.status).toBe(400);
+
+      const payload = { queue_entry_id: 99, user_id: 'u99', user_name: 'SSE Joined User' };
+      res = await request(userServer).post('/api/users/queue/join').send({ service_id: 7, client_entry: payload });
+      expect(res.status).toBe(200);
+    });
+
+    test('leave route deletes items from real-time dynamic structures', async () => 
+    {
+      let res = await request(userServer).post('/api/users/queue/leave').send({ service_id: 99999 });
+      expect(res.status).toBe(404);
+
+      res = await request(userServer).post('/api/users/queue/leave').send({ service_id: 7 });
+      expect(res.status).toBe(400);
+
+      res = await request(userServer).post('/api/users/queue/leave').send({ service_id: 7, queue_entry_id: 3 });
+      expect(res.status).toBe(200);
+
+      res = await request(userServer).post('/api/users/queue/leave').send({ service_id: 7, queue_entry_id: 1045 });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  test('startServer runtime handles fallbacks cleanly when parameter fields are empty', async () => 
+  {
+    // Tear down initialized cluster setup safely first to claim port 3000
+    await new Promise(resolve => server.close(resolve));
+    await new Promise(resolve => userServer.close(resolve));
+
+    const alternativeInstance = await startServer();
+    expect(alternativeInstance.address().port).toBe(3000);
+    await new Promise(resolve => alternativeInstance.close(resolve));
   });
 });

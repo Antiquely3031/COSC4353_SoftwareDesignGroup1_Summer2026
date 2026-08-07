@@ -195,3 +195,24 @@ BEGIN
         DELETE FROM Service WHERE service_id = targeted_service_id;
     COMMIT;
 END
+
+-- Admin Queue Management Transactions
+CREATE PROCEDURE UPDATE_Queue_Entry
+(
+    IN targeted_queue_entry_id INT,
+    IN targeted_position INT,
+    IN targeted_status INT
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+    START TRANSACTION;
+        UPDATE Queue_Entry
+        SET position = targeted_position, status = targeted_status
+        WHERE queue_entry_id = targeted_queue_entry_id;
+    COMMIT;
+END

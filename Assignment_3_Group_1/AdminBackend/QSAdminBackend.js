@@ -13,11 +13,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Create the unified HTTP server
+// Create the unified HTTP server for ADMIN operations (REST + Admin WS)
 const server = http.createServer(app);
-
-// Attach WebSockets to the HTTP server
 const io = new Server(server, { cors: { origin: "*" } });
+
+// Create a completely separate HTTP server instance for USER-side SSE traffic
+const userApp = express();
+userApp.use(cors());
+userApp.use(express.json());
+const userServer = http.createServer(userApp);
+
+// Array to track open SSE client streams
+let userClients = [];
 
 class Queue_Entry 
 {
@@ -160,6 +167,15 @@ async function Status_Changer(service_id, new_status)
   return targetService;
 }
 
+// Helper to broadcast synchronization changes to Admin WebSockets and User SSE streams simultaneously
+function broadcastQueueUpdate()
+{
+  io.emit('queue_updated', Services_Container);
+  
+  const stringifiedData = JSON.stringify(Services_Container);
+  userClients.forEach(client => {  client.res.write(`data: ${stringifiedData}\n\n`);  });
+}
+
 app.patch('/api/admin/services/status', async (req, res) => 
 {
     const { service_id, status } = req.body;
@@ -172,7 +188,7 @@ app.patch('/api/admin/services/status', async (req, res) =>
 
       if (updatedService) 
       {
-        io.emit('queue_updated', Services_Container);
+        broadcastQueueUpdate();
 
         return res.status(200).json({
           message: 'Status updated successfully',
@@ -214,7 +230,7 @@ app.post('/api/admin/services', async (req, res) =>
     if (insertIndex === -1) Services_Container.push(newService);
     else Services_Container.splice(insertIndex, 0, newService);
 
-    io.emit('queue_updated', Services_Container);
+    broadcastQueueUpdate();
 
     return res.status(201).json({ message: 'Service created successfully', service: newService });
   } 
@@ -251,7 +267,7 @@ app.put('/api/admin/services', async (req, res) =>
     if (targetIndex === -1) Services_Container.push(targetService);
     else Services_Container.splice(targetIndex, 0, targetService);
 
-    io.emit('queue_updated', Services_Container);
+    broadcastQueueUpdate();
 
     return res.status(200).json({ message: 'Service updated successfully', service: targetService });
   } 
@@ -271,7 +287,7 @@ app.delete('/api/admin/services/:id', async (req, res) =>
 
     Services_Container.splice(index, 1);
 
-    io.emit('queue_updated', Services_Container);
+    broadcastQueueUpdate();
 
     return res.status(200).json({ message: 'Service deleted successfully' });
   } 
@@ -300,15 +316,18 @@ function notifyServed(servedClient, serviceName) {
   }).catch(() => { /* notification service unreachable — ignore */ });
 }
 
+// -------------------------------------------------------------
+// CONNECTION HUB 1: ADMIN WEB-SOCKET PORT (Privileged Scope)
+// -------------------------------------------------------------
 io.on('connection', (socket) => 
 {
-  console.log('Client connected to Queue WS:', socket.id);
+  console.log('Admin connected to Queue WS:', socket.id);
 
   socket.emit('queue_updated', Services_Container);
 
   socket.on('disconnect', (reason) => 
   {
-      console.log(`Client disconnected from Queue WS (${socket.id}). Reason: ${reason}`);
+      console.log(`Admin disconnected from Queue WS (${socket.id}). Reason: ${reason}`);
   });
 
   socket.on('serve_client', (data) => 
@@ -327,12 +346,11 @@ io.on('connection', (socket) =>
       }
       else targetIndex = 0;
 
-      /* istanbul ignore else */
       if (targetIndex !== -1)
       {
         servedClient = service.Queue_Array.splice(targetIndex, 1)[0];
         service.queue_length = service.Queue_Array.length;
-        io.emit('queue_updated', Services_Container);
+        broadcastQueueUpdate();
 
         const notifyPayload = (servedClient && servedClient.user_id) ? servedClient.user_id : servedClient;
         notifyServed(notifyPayload, service.name);
@@ -355,12 +373,11 @@ io.on('connection', (socket) =>
       }
       else targetIndex = 0;
 
-      /* istanbul ignore else */
       if (targetIndex !== -1)
       {
         service.Queue_Array.splice(targetIndex, 1);
         service.queue_length = service.Queue_Array.length;
-        io.emit('queue_updated', Services_Container);
+        broadcastQueueUpdate();
       }
     }
   });
@@ -374,62 +391,96 @@ io.on('connection', (socket) =>
     {
       service.Queue_Array = updated_queue;
       service.queue_length = service.Queue_Array.length;
-      io.emit('queue_updated', Services_Container);
-    }
-  });
-
-  socket.on('join_queue', (data) => 
-  {
-    const { service_id, client_entry } = data || {};
-    const service = Services_Container.find(s => String(s.service_id) === String(service_id));
-
-    if (service && client_entry) 
-    {
-      service.Queue_Array.push(client_entry);
-      service.queue_length = service.Queue_Array.length;
-      io.emit('queue_updated', Services_Container);
-    }
-  });
-
-  socket.on('leave_queue', (data) => 
-  {
-    const { service_id, queue_entry_id } = data || {};
-    const service = Services_Container.find(s => String(s.service_id) === String(service_id));
-    if (service && queue_entry_id !== undefined && queue_entry_id !== null) 
-    {
-      const index = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
-
-      /* istanbul ignore else */
-      if (index !== -1) 
-      {
-        service.Queue_Array.splice(index, 1);
-        service.queue_length = service.Queue_Array.length;
-        io.emit('queue_updated', Services_Container);
-      }
+      broadcastQueueUpdate();
     }
   });
 });
 
-/* istanbul ignore next */
-async function startServer(port = 3000) 
+// -------------------------------------------------------------
+// CONNECTION HUB 2: USER SERVER-SENT EVENTS ROUTER (Public Scope)
+// -------------------------------------------------------------
+userApp.get('/api/users/queue/stream', (req, res) => 
+{
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const clientId = Date.now();
+  const newClient = { id: clientId, res };
+  userClients.push(newClient);
+
+  console.log(`Public User stream connected via SSE. Stream Count: ${userClients.length}`);
+
+  // Push instant baseline state upon connection
+  res.write(`data: ${JSON.stringify(Services_Container)}\n\n`);
+
+  req.on('close', () => 
+  {
+    userClients = userClients.filter(client => client.id !== clientId);
+    console.log(`Public User stream disconnected from SSE. Stream Count: ${userClients.length}`);
+  });
+});
+
+userApp.post('/api/users/queue/join', (req, res) => 
+{
+  const { service_id, client_entry } = req.body || {};
+  const service = Services_Container.find(s => String(s.service_id) === String(service_id));
+
+  if (!service) return res.status(404).json({ error: 'Service target not found.' });
+  if (!client_entry) return res.status(400).json({ error: 'Missing client entry data.' });
+
+  service.Queue_Array.push(client_entry);
+  service.queue_length = service.Queue_Array.length;
+  broadcastQueueUpdate();
+
+  return res.status(200).json({ message: 'Joined successfully.' });
+});
+
+userApp.post('/api/users/queue/leave', (req, res) => 
+{
+  const { service_id, queue_entry_id } = req.body || {};
+  const service = Services_Container.find(s => String(s.service_id) === String(service_id));
+  
+  if (!service) return res.status(404).json({ error: 'Service target not found.' });
+  if (queue_entry_id === undefined || queue_entry_id === null) return res.status(400).json({ error: 'Missing queue entry identifier.' });
+
+  const index = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
+
+  /* istanbul ignore else */
+  if (index !== -1) 
+  {
+    service.Queue_Array.splice(index, 1);
+    service.queue_length = service.Queue_Array.length;
+    broadcastQueueUpdate();
+    return res.status(200).json({ message: 'Left queue successfully.' });
+  }
+
+  return res.status(404).json({ error: 'Queue entry not found within service.' });
+});
+
+async function startServer(adminPort = 3000, userPort = 3005) 
 {
   Services_Container = await Container_Initializer();
-  return server.listen(port, () => 
+  
+  // Start the User listener channel
+  userServer.listen(userPort, () => {
+    console.log(`User Queue SSE Event stream listening on port ${userPort}`);
+  });
+
+  // Start the Admin listener channel
+  return server.listen(adminPort, () => 
   {
-    console.log(`AdminBackend (HTTP + WebSockets) listening on port ${port}`);
+    console.log(`AdminBackend (HTTP + WebSockets) listening on port ${adminPort}`);
   });
 }
 
 /* istanbul ignore next */
-if (require.main === module) startServer(3000);
+if (require.main === module) startServer(3000, 3005);
 
 module.exports = { 
-  app, 
-  server, 
-  io, 
+  app, server, userServer, io, userApp, 
   startServer, 
-  Service_Entry, 
-  Queue_Entry, 
+  Service_Entry, Queue_Entry, 
   Container_Initializer, 
   Status_Changer 
 };
