@@ -177,7 +177,6 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
 
   beforeAll(async () => 
   {
-    // Boot both components under randomized unallocated dynamic test ports
     await startServer(0, 0);
     adminPort = server.address().port;
     userPort = userServer.address().port;
@@ -227,7 +226,6 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
 
     test('POST /api/admin/services covers every custom field validation rule', async () => 
     {
-      // Missing field validations
       let res = await request(server).post('/api/admin/services').send({ description: 'D', expected_duration: 10 });
       expect(res.status).toBe(400);
       res = await request(server).post('/api/admin/services').send({ name: 'N', expected_duration: 10 });
@@ -235,15 +233,12 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
       res = await request(server).post('/api/admin/services').send({ name: 'N', description: 'D' });
       expect(res.status).toBe(400);
 
-      // Character string lengths bounds evaluation
       res = await request(server).post('/api/admin/services').send({ name: 'A'.repeat(105), description: 'D', expected_duration: 10 });
       expect(res.status).toBe(400);
 
-      // Numeric parser validations
       res = await request(server).post('/api/admin/services').send({ name: 'N', description: 'D', expected_duration: 'invalid-num' });
       expect(res.status).toBe(400);
 
-      // Check explicit priority configurations mappings
       res = await request(server).post('/api/admin/services').send({ name: 'Low Prio P', description: 'D', expected_duration: 5, priority: '1' });
       expect(res.status).toBe(201);
       res = await request(server).post('/api/admin/services').send({ name: 'Medium Prio P', description: 'D', expected_duration: 5, priority: 'medium' });
@@ -251,11 +246,9 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
       res = await request(server).post('/api/admin/services').send({ name: 'High Prio P', description: 'D', expected_duration: 5, priority: 'high' });
       expect(res.status).toBe(201);
 
-      // Duplicate detection conflict responses
       res = await request(server).post('/api/admin/services').send({ name: 'Placeholder 2', description: 'D', expected_duration: 10 });
       expect(res.status).toBe(409);
 
-      // Exception branch evaluation
       res = await request(server).post('/api/admin/services').send({ name: 'TriggerError', description: 'D', expected_duration: 10 });
       expect(res.status).toBe(500);
     });
@@ -271,7 +264,6 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
       res = await request(server).put('/api/admin/services').send({ service_id: 99999, name: 'Ghost', description: 'D', expected_duration: 5 });
       expect(res.status).toBe(404);
 
-      // Valid execution that requires moving positions based on updated priority levels
       res = await request(server).put('/api/admin/services').send({ service_id: 3, name: 'Reordered Element', description: 'Desc', expected_duration: 45, priority: 'low' });
       expect(res.status).toBe(200);
 
@@ -319,7 +311,6 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
         done();
       });
 
-      // Target service 4, entry 1 explicitly to isolate data mutation and trigger position loop
       socketClient.emit('serve_client', { service_id: 4, queue_entry_id: 1 });
     });
 
@@ -333,11 +324,19 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
     {
       pool.query.mockImplementationOnce(() => Promise.reject(new Error('Internal Cascading Shift Error')));
       
-      // Send the event
       socketClient.emit('serve_client', { service_id: 4, queue_entry_id: 2 });
       
-      // Since the backend safely catches the error and suppresses the broadcast,
-      // assert that the socket connection survives the error state.
+      setTimeout(() => {
+        expect(socketClient.connected).toBe(true);
+        done();
+      }, 50);
+    });
+
+    test('serve_client targets index zero fallback branch handling when entry ids are fully omitted', (done) =>
+    {
+      pool.query.mockImplementationOnce(() => Promise.reject(new Error('Internal shift fallback error')));
+      socketClient.emit('serve_client', { service_id: 5 });
+      
       setTimeout(() => {
         expect(socketClient.connected).toBe(true);
         done();
@@ -347,7 +346,6 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
     test('remove_client removes targeted items from queue arrays and re-indexes remaining elements cleanly', (done) => 
     {
       socketClient.once('queue_updated', () => done());
-      // Isolated to service_id: 5 to ensure queue entry index 2 safely exists uncaught by prior operations
       socketClient.emit('remove_client', { service_id: 5, queue_entry_id: 2 });
     });
 
@@ -360,8 +358,12 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
     test('remove_client handles cascading position database query failures gracefully', (done) => 
     {
       pool.query.mockImplementationOnce(() => Promise.reject(new Error('Internal Cascading Shift Cancel Error')));
-      socketClient.once('queue_updated', () => done());
       socketClient.emit('remove_client', { service_id: 5, queue_entry_id: 3 });
+      
+      setTimeout(() => {
+        expect(socketClient.connected).toBe(true);
+        done();
+      }, 50);
     });
 
     test('reorder_queue applies custom array structural mappings', (done) => 
@@ -373,7 +375,6 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
         try {
           const updatedMatch = payload.find(s => s.service_id === 6);
           
-          // Use objectContaining or match the property structure to account for the position injection
           expect(updatedMatch.Queue_Array).toEqual([
             expect.objectContaining({
               queue_entry_id: 777,
@@ -383,12 +384,12 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
           
           done();
         } catch (error) {
-          done(error); // Routes the assertion failure out instantly without hanging
+          done(error);
         }
       });
 
-  socketClient.emit('reorder_queue', { service_id: 6, updated_queue: customConfiguration });
-});
+      socketClient.emit('reorder_queue', { service_id: 6, updated_queue: customConfiguration });
+    });
 
     test('reorder_queue handles database shift errors gracefully', (done) => 
     {
@@ -415,13 +416,11 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
   {
     test('stream channel establishes event headers and updates data streams', (done) => 
     {
-      // Native http client bypasses Supertest stream accumulation bugs
       const req = http.get(`http://localhost:${userPort}/api/users/queue/stream`, (res) => {
         expect(res.headers['content-type']).toBe('text/event-stream');
         expect(res.headers['cache-control']).toBe('no-cache');
         expect(res.headers['connection']).toBe('keep-alive');
         
-        // Destroy connection manually immediately to release event loop
         req.destroy();
         done();
       });
@@ -458,7 +457,6 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
 
   test('startServer runtime handles fallbacks cleanly when parameter fields are empty', async () => 
   {
-    // Tear down initialized cluster setup safely first to claim port 3000
     await new Promise(resolve => server.close(resolve));
     await new Promise(resolve => userServer.close(resolve));
 

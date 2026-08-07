@@ -319,6 +319,50 @@ function notifyServed(servedClient, serviceName) {
 // -------------------------------------------------------------
 // CONNECTION HUB 1: ADMIN WEB-SOCKET PORT (Privileged Scope)
 // -------------------------------------------------------------
+
+async function QE_Service_Shfit(selected_service) 
+{
+  try 
+  {
+    for (let i = 0; i < selected_service.Queue_Array.length; i++) 
+    {
+      const entry = selected_service.Queue_Array[i];
+      if (entry && entry.queue_entry_id) 
+      {
+        entry.position = i + 1;
+        await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+          entry.queue_entry_id, 
+          entry.position, 
+          entry.line_status || 'waiting'
+        ]);
+      }
+    }
+  } 
+  catch (dbErr) 
+  {
+    console.error('Failed to shift remaining queue entry positions after removal:', dbErr.message);
+  }
+}
+
+async function QE_Remover(target_client, effect) 
+{
+  if (target_client && target_client.queue_entry_id)
+  {
+    try 
+    {
+      await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+        target_client.queue_entry_id, 
+        target_client.position || 1, 
+        effect
+      ]);
+    } 
+    catch (dbErr) 
+    {
+      console.error('Failed to persist served client status to database:', dbErr.message);
+    }
+  }
+}
+
 io.on('connection', (socket) => 
 {
   console.log('Admin connected to Queue WS:', socket.id);
@@ -350,27 +394,8 @@ io.on('connection', (socket) =>
       {
         servedClient = service.Queue_Array.splice(targetIndex, 1)[0];
 
-        // Recalculate positions for remaining entries sequentially in memory and database
-        try 
-        {
-          for (let i = 0; i < service.Queue_Array.length; i++) 
-          {
-            const entry = service.Queue_Array[i];
-            if (entry && entry.queue_entry_id) 
-            {
-              entry.position = i + 1;
-              await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
-                entry.queue_entry_id, 
-                entry.position, 
-                entry.line_status || 'waiting'
-              ]);
-            }
-          }
-        } 
-        catch (dbErr) 
-        {
-          console.error('Failed to shift remaining queue entry positions after serving:', dbErr.message);
-        }
+        // Update all the positions to ensure the correct ordering.
+        QE_Service_Shfit(service);
 
         service.queue_length = service.Queue_Array.length;
         broadcastQueueUpdate();
@@ -379,21 +404,7 @@ io.on('connection', (socket) =>
         notifyServed(notifyPayload, service.name);
 
         // Persist serving state changes in database safely preserving historical context
-        if (servedClient && servedClient.queue_entry_id)
-        {
-          try 
-          {
-            await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
-              servedClient.queue_entry_id, 
-              servedClient.position || 1, 
-              'served'
-            ]);
-          } 
-          catch (dbErr) 
-          {
-            console.error('Failed to persist served client status to database:', dbErr.message);
-          }
-        }
+        QE_Remover(servedClient, 'served');
       }
     }
   });
@@ -417,47 +428,14 @@ io.on('connection', (socket) =>
       {
         const removedClient = service.Queue_Array.splice(targetIndex, 1)[0];
 
-        // Recalculate positions for remaining entries sequentially in memory and database
-        try 
-        {
-          for (let i = 0; i < service.Queue_Array.length; i++) 
-          {
-            const entry = service.Queue_Array[i];
-            if (entry && entry.queue_entry_id) 
-            {
-              entry.position = i + 1;
-              await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
-                entry.queue_entry_id, 
-                entry.position, 
-                entry.line_status || 'waiting'
-              ]);
-            }
-          }
-        } 
-        catch (dbErr) 
-        {
-          console.error('Failed to shift remaining queue entry positions after removal:', dbErr.message);
-        }
+        // Update all the positions to ensure the correct ordering.
+        QE_Service_Shfit(service);
 
         service.queue_length = service.Queue_Array.length;
         broadcastQueueUpdate();
 
         // Persist removal in database safely preserving historical context
-        if (removedClient && removedClient.queue_entry_id)
-        {
-          try 
-          {
-            await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
-              removedClient.queue_entry_id, 
-              removedClient.position || 1, 
-              'canceled'
-            ]);
-          } 
-          catch (dbErr) 
-          {
-            console.error('Failed to persist client removal to database:', dbErr.message);
-          }
-        }
+        QE_Remover(removedClient, 'canceled');
       }
     }
   });
