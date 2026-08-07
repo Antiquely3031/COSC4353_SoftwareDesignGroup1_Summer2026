@@ -95,7 +95,17 @@ function Remove_Client()
 {
     if (!currentSelectedServiceId) return;
 
-    if (socket && socket.connected) { socket.emit('remove_client', { service_id: currentSelectedServiceId, client_index: 0 }); } 
+    const Service_List = document.querySelector('.queue-list-box ul');
+    const First_Item = Service_List ? Service_List.querySelector('.sortable-item') : null;
+    const targetEntryId = First_Item ? First_Item.dataset.queueEntryId : null;
+
+    if (socket && socket.connected) 
+    { 
+        socket.emit('remove_client', { 
+            service_id: currentSelectedServiceId, 
+            queue_entry_id: targetEntryId 
+        }); 
+    } 
     else { console.warn("Socket not connected to server."); }
 }
 
@@ -103,7 +113,17 @@ function Serve_Next_Client()
 {
     if (!currentSelectedServiceId) return;
 
-    if (socket && socket.connected) { socket.emit('serve_client', { service_id: currentSelectedServiceId }); } 
+    const Service_List = document.querySelector('.queue-list-box ul');
+    const First_Item = Service_List ? Service_List.querySelector('.sortable-item') : null;
+    const targetEntryId = First_Item ? First_Item.dataset.queueEntryId : null;
+
+    if (socket && socket.connected) 
+    { 
+        socket.emit('serve_client', { 
+            service_id: currentSelectedServiceId, 
+            queue_entry_id: targetEntryId 
+        }); 
+    } 
     else { console.warn("Socket not connected to server."); }
 }
 
@@ -132,13 +152,21 @@ function renderQueueList(service)
         return;
     }
 
-    service.Queue_Array.forEach((person) =>
+    service.Queue_Array.forEach((entry) =>
     {
+        if (!entry) return;
         const Index_li = document.createElement('li');
         Index_li.setAttribute('draggable', 'true');
         Index_li.classList.add('sortable-item');
         
-        Index_li.innerHTML = `<p>${person}</p>`;
+        // Save the metadata attributes onto the collection container item
+        Index_li.dataset.queueEntryId = entry.queue_entry_id;
+        Index_li.dataset.userId = entry.user_id;
+        Index_li.dataset.position = entry.position;
+        Index_li.dataset.lineStatus = entry.line_status;
+        Index_li.dataset.joinTime = entry.join_time;
+        
+        Index_li.innerHTML = `<p>${entry.user_name}</p>`;
         Service_List.appendChild(Index_li);
     });
 
@@ -162,14 +190,23 @@ function Enable_Queue_Sorting(List_Element)
         document.querySelectorAll('.sortable-item').forEach(item => item.classList.remove('over'));
         draggingItem = null;
 
-        // Extract updated DOM order and emit to backend over WebSockets
+        // Extract updated DOM order parsing standard Queue_Entry data objects back to WS
         if (currentSelectedServiceId && socket && socket.connected) 
         {
-            const updatedQueueNames = [...List_Element.querySelectorAll('.sortable-item p')].map(p => p.textContent.trim());
+            const updatedQueueObjects = [...List_Element.querySelectorAll('.sortable-item')].map(li => {
+                return {
+                    queue_entry_id: li.dataset.queueEntryId,
+                    user_id: li.dataset.userId,
+                    user_name: li.querySelector('p').textContent.trim(),
+                    position: Number(li.dataset.position),
+                    line_status: li.dataset.lineStatus,
+                    join_time: li.dataset.joinTime
+                };
+            });
 
             socket.emit('reorder_queue', {
                 service_id: currentSelectedServiceId,
-                updated_queue: updatedQueueNames
+                updated_queue: updatedQueueObjects
             });
         }
     });
@@ -180,7 +217,7 @@ function Enable_Queue_Sorting(List_Element)
         const draggingOverItem = getDragAfterElement(List_Element, event.clientY);
         document.querySelectorAll('.sortable-item').forEach(item => item.classList.remove('over'));
         
-        if (!draggingItem) { return; }
+        if (!draggingItem) return;
 
         if (draggingOverItem) 
         {

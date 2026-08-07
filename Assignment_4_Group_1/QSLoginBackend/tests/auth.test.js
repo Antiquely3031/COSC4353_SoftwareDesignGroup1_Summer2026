@@ -1,3 +1,9 @@
+jest.mock('nodemailer', () => ({
+  createTransport: () => ({
+    sendMail: jest.fn().mockResolvedValue({response: 'mocked'})
+  })
+}));
+
 const request = require('supertest');
 const app = require('../app');
 const db = require('../db');
@@ -119,28 +125,183 @@ describe('POST /api/admin-login', () => {
       .send({ email: 'admin@test.com' });
   });
 
-  test('allows login for a promoted admin', async () => {
+  test('allow login for prompted admin', async () => {
     const res = await request(app)
       .post('/api/admin-login')
-      .send({ email: 'admin@test.com', password: 'adminpass123' });
-
+      .send({email: 'admin@test.com', password: 'adminpass123'});
     expect(res.statusCode).toBe(200);
     expect(res.body.role).toBe('Administrator');
   });
 
-  test('blocks a valid, non-admin user with 403', async () => {
+  test('block a valid, non-admin user with 403 code', async () => {
     const res = await request(app)
       .post('/api/admin-login')
-      .send({ email: 'patrick@test.com', password: 'testpass123' });
-
+      .send({email: 'patrick@test.com', password: 'testpass123'});
     expect(res.statusCode).toBe(403);
   });
 
-  test('rejects wrong password with 401, not 403', async () => {
+  test('reject incorrect password with 401', async () => {
     const res = await request(app)
       .post('/api/admin-login')
-      .send({ email: 'admin@test.com', password: 'wrongpass' });
-
+      .send({email: 'admin@test.com', password: 'wrongpass'});
     expect(res.statusCode).toBe(401);
   });
+
+  test('rejects missing email or password', async () => {
+    const res = await request(app)
+      .post('/api/admin-login')
+      .send({email: 'admin@test.com'});
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toMatch(/required/i);
+  });
+
+  test('rejects invalid email formatting', async () => {
+    const res = await request(app)
+      .post('/api/admin-login')
+      .send({email: 'not-an-email', password: 'adminpass123'});
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toMatch(/valid email/i);
+  });
+
+  test('reject email that does not exist', async () => {
+    const res = await request(app)
+      .post('/api/admin-login')
+      .send({email: 'nobody@test.com', password: 'anypassword'});
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error).toMatch(/invalid/i);
+  });
 });
+
+describe('PUT /api/user/update', () => {
+  beforeEach(async() => {
+    await db.deleteUserByEmail('updateuser@test.com');
+    await request(app).post('/api/signup/')
+      .send({name: 'Original Name', email: 'updateuser@test.com', password: 'testpass123'});
+  });
+
+  test('updates name with correct current password', async () => {
+    const res = await request(app)
+      .put('/api/user/update')
+      .send({email: 'updateuser@test.com', currentPassword: 'testpass123', newName: 'New Name'});
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe('Account updated successfully.');
+  });
+
+  test('rejects update with wrong current password', async () => {
+    const res = await request(app)
+      .put('/api/user/update')
+      .send({email: 'updateuser@test.com', currentPassword: 'wrongpass', newName: 'New Name'});
+    expect(res.statusCode).toBe(401);
+  });
+
+  test('rejects new password outside length bounds', async() => {
+    const res = await request(app)
+      .put('/api/user/update')
+      .send({email: 'updateuser@test.com', currentPassword: 'testpass123', newPassword: 'short'});
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('successfully changes password and old password stops working', async () => {
+    await request(app).put('/api/user/update')
+      .send({email: 'updateuser@test.com', currentPassword: 'testpass123', newPassword: 'newpass456'});
+    const oldLogin = await request(app).post('/api/login')
+      .send({email: 'updateuser@test.com', password: 'testpass123'});
+    expect(oldLogin.statusCode).toBe(401);
+    const newLogin = await request(app).post('/api/login')
+      .send({email: 'updateuser@test.com', password: 'newpass456'});
+    expect(newLogin.statusCode).toBe(200);
+  });
+});
+
+describe('POST /api/forgot-password', () => {
+  beforeEach(async () => {
+    await db.deleteUserByEmail('forgotuser@test.com');
+    await request(app).post('/api/signup')
+      .send({name: 'Forgot User', email: 'forgotuser@test.com', password: 'testpass123'});
+  });
+
+  test('returns generic success message for an existing email', async () => {
+    const res = await request(app)
+      .post('/api/forgot-password')
+      .send({email: 'forgotuser@test.com'});
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBeDefined();
+  });
+
+  test('returns generic message for an email that does not exist', async () => {
+    const res = await request(app)
+      .post('/api/forgot-password')
+      .send({email: 'doesnotexist@test.com'});
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBeDefined();
+  });
+
+  test('rejects missing email', async () => {
+    const res = await request(app)
+      .post('/api/forgot-password')
+      .send({});
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('sets reset token in database for real user', async () => {
+    await request(app).post('/api/forgot-password').send({email: 'forgotuser@test.com'});
+    const user = await db.findUserByEmail('forgotuser@test.com');
+    expect(user.reset_token).not.toBeNull();
+    expect(user.reset_token_expires).not.toBeNull();
+  });
+});
+
+describe('POST /api/reset-password', () => {
+  let validToken;
+  beforeEach(async () => {
+    await db.deleteUserByEmail('resetflow@test.com');
+    await request(app).post('/api/signup')
+      .send({name: 'Reset Flow', email: 'resetflow@test.com', password: 'testpass123'});
+    validToken = 'test-token-' + Date.now();
+    const user = await db.findUserByEmail('resetflow@test.com');
+    const futureExpiry = new Date(Date.now() + 3600000);
+    await db.setResetToken(user.user_id, validToken, futureExpiry);
+  });
+
+  test('rejects missing token password', async () => {
+    const res = await request(app).post('/api/reset-password').send({});
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('rejects an invalid or unkown token', async () => {
+    const res = await request(app)
+      .post('/api/reset-password')
+      .send({token: 'not-a-real-token', newPassword: 'newpass456'});
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('rejects an expired token', async () => {
+    const user = await db.findUserByEmail('resetflow@test.com');
+    const pastExpiry = new Date(Date.now() - 1000);
+    await db.setResetToken(user.user_id, validToken, pastExpiry);
+    const res = await request(app)
+      .post('/api/reset-password')
+      .send({token: validToken, newPassword: 'newpass456'});
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('successful password reset with token', async () => {
+    const res = await request(app)
+      .post('/api/reset-password')
+      .send({token: validToken, newPassword: 'newpass456'});
+    expect(res.statusCode).toBe(200);
+    const login = await request(app).post('/api/login')
+      .send({email: 'resetflow@test.com', password: 'newpass456'});
+    expect(login.statusCode).toBe(200);
+  });
+
+  test('token cannot be reused after reset', async () => {
+    await request(app).post('/api/reset-password')
+      .send({token: validToken, newPassword: 'newpass456'});
+    const secondAttempt = await request(app)
+      .post('/api/reset-password')
+      .send({token: validToken, newPassword: 'anotherpass789'});
+    expect(secondAttempt.statusCode).toBe(400);
+  });
+});
+

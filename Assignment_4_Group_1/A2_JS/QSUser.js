@@ -60,6 +60,7 @@ async function setupJoinQueuePage() {
             return;
         }
 
+
         try {
             const response = await fetch(`${baseAPI}/queue/join`, {
                 method: "POST",
@@ -73,6 +74,7 @@ async function setupJoinQueuePage() {
             });
 
             const data = await response.json();
+
 
             if (!response.ok) {
                 joinQueueMessage.textContent = data.error || "Failed to join queue.";
@@ -91,16 +93,16 @@ async function setupJoinQueuePage() {
             localStorage.setItem("currentQueue", JSON.stringify(queueData));
 
             joinQueueMessage.textContent =
-                `You joined the ${queueData.serviceName} queue. ` +
-                `Your position is ${queueData.position}, and your estimated wait time is ${queueData.estimatedWait} minutes.`;
+                `You joined the ${data.serviceName} queue. ` +
+                `Your position is ${data.position}, and your estimated wait time is ${data.estimatedWait} minutes.`;
 
         } catch (error) {
             console.error("Error joining queue:", error);
             joinQueueMessage.textContent = "Unable to connect to the backend.";
         }
     });
-
     //leave queue button functionality
+    if (leaveQueueButton) {
     if (leaveQueueButton) {
         //assuming user leaves instigate queue departure 
         leaveQueueButton.addEventListener("click", async () => {
@@ -144,8 +146,8 @@ async function setupDashboardPage() {
         if (queueStatus) queueStatus.textContent = currentQueue.status;
     }
 }
-
 //queue status page
+async function setupQueueStatusPage() {
 async function setupQueueStatusPage() {
     const currentQueue = getCurrentQueue();
     const serviceName = document.getElementById("statusService");
@@ -208,7 +210,16 @@ async function setupQueueStatusPage() {
                 if (statusMessage) {
                     statusMessage.textContent = `You have left the ${data.serviceName} queue.`;
                 }
+                if (statusMessage) {
+                    statusMessage.textContent = `You have left the ${data.serviceName} queue.`;
+                }
 
+                if (queueStatusCard) {
+                    queueStatusCard.style.display = "none";
+                }
+                if (window.QSNotify && typeof QSNotify.left === "function") {
+                    QSNotify.left(data.serviceName);
+                }
                 if (queueStatusCard) {
                     queueStatusCard.style.display = "none";
                 }
@@ -224,9 +235,17 @@ async function setupQueueStatusPage() {
             }
         });
     }
+            } catch (error) {
+                console.error("Error leaving queue:", error);
+                if (statusMessage) {
+                    statusMessage.textContent = "Unable to connect to backend.";
+                }
+            }
+        });
+    }
 }
-
 //queue history page
+async function setupHistoryPage() {
 async function setupHistoryPage() {
     const historyListBody = document.getElementById("historyListBody");
 
@@ -248,9 +267,26 @@ async function setupHistoryPage() {
         if (!response.ok) {
             throw new Error(history.error || "Failed to load history.");
         }
+    try {
+        const response = await fetch(`${baseAPI}/queue/history/${userID}`);
+        const history = await response.json();
+
+        if (!response.ok) {
+            throw new Error(history.error || "Failed to load history.");
+        }
 
         historyListBody.innerHTML = "";
+        historyListBody.innerHTML = "";
 
+        if (history.length === 0) {
+            historyListBody.innerHTML = `
+                <div class="history-row">
+                    <span>No queue history available.</span>
+                    <span>--</span>
+                    <span>--</span>
+                    <span>--</span>
+                </div>
+            `;
         if (history.length === 0) {
             historyListBody.innerHTML = `
                 <div class="history-row">
@@ -265,14 +301,33 @@ async function setupHistoryPage() {
             if (summaryServed) summaryServed.textContent = 0;
             if (summaryCanceled) summaryCanceled.textContent = 0;
             if (summaryNoShow) summaryNoShow.textContent = 0;
+            if (summaryTotal) summaryTotal.textContent = 0;
+            if (summaryServed) summaryServed.textContent = 0;
+            if (summaryCanceled) summaryCanceled.textContent = 0;
+            if (summaryNoShow) summaryNoShow.textContent = 0;
 
+            return;
+        }
             return;
         }
 
         let servedCount = 0;
         let canceledCount = 0;
         let noShowCount = 0;
+        let servedCount = 0;
+        let canceledCount = 0;
+        let noShowCount = 0;
 
+        history.forEach(record => {
+            const status = record.status || "unknown";
+            const statusLower = status.toLowerCase();
+
+            let statusClass = "waiting";
+
+            if (statusLower === "served" || statusLower === "completed") {
+                servedCount++;
+                statusClass = "completed";
+            }
         history.forEach(record => {
             const status = record.status || "unknown";
             const statusLower = status.toLowerCase();
@@ -288,7 +343,19 @@ async function setupHistoryPage() {
                 canceledCount++;
                 statusClass = "canceled";
             }
+            if (statusLower === "canceled" || statusLower === "cancelled") {
+                canceledCount++;
+                statusClass = "canceled";
+            }
 
+            if (statusLower === "no show") {
+                noShowCount++;
+                statusClass = "no-show";
+            }
+
+            const joinedDate = record.join_time ? new Date(record.join_time) : null;
+            const date = joinedDate ? joinedDate.toLocaleDateString() : "--";
+            const time = joinedDate ? joinedDate.toLocaleTimeString() : "--";
             if (statusLower === "no show") {
                 noShowCount++;
                 statusClass = "no-show";
@@ -300,6 +367,8 @@ async function setupHistoryPage() {
 
             const row = document.createElement("div");
             row.classList.add("history-row");
+            const row = document.createElement("div");
+            row.classList.add("history-row");
 
             row.innerHTML = `
                 <span>${record.service_name}</span>
@@ -309,7 +378,17 @@ async function setupHistoryPage() {
                     ${status}
                 </span>
             `;
+            row.innerHTML = `
+                <span>${record.service_name}</span>
+                <span>${date}</span>
+                <span>${time}</span>
+                <span class="outcome ${statusClass}">
+                    ${status}
+                </span>
+            `;
 
+            historyListBody.appendChild(row);
+        });
             historyListBody.appendChild(row);
         });
 
@@ -334,55 +413,54 @@ async function setupHistoryPage() {
 function addHistoryRecord(serviceName, status) {
     const history = getHistory();
 
-    const now = new Date();
-    //default value
-    let statusClass = "completed";
+//     const now = new Date();
+//     //default value
+//     let statusClass = "completed";
 
-    if (status.toLowerCase() === "canceled") {
-        statusClass = "canceled";
-    }
-    if (status.toLowerCase() === "no show") {
-        statusClass = "no-show";
-    }
+//     if (status.toLowerCase() === "canceled") {
+//         statusClass = "canceled";
+//     }
+//     if (status.toLowerCase() === "no show") {
+//         statusClass = "no-show";
+//     }
 
-    history.unshift({
-        serviceName: serviceName,
-        date: now.toLocaleDateString(),
-        time: now.toLocaleTimeString(),
-        status: status,
-        statusClass: statusClass
-    });
-    localStorage.setItem("queueHistory", JSON.stringify(history));
-}
+//     history.unshift({
+//         serviceName: serviceName,
+//         date: now.toLocaleDateString(),
+//         time: now.toLocaleTimeString(),
+//         status: status,
+//         statusClass: statusClass
+//     });
+//     localStorage.setItem("queueHistory", JSON.stringify(history));
+// }
+// function getHistory() {
+//     const history = localStorage.getItem("queueHistory");
 
-function getHistory() {
-    const history = localStorage.getItem("queueHistory");
+//     if (!history) {
+//         return [];
+//     }
 
-    if (!history) {
-        return [];
-    }
+//     return JSON.parse(history);
+// }
+// function getNextQueuePosition(serviceId) {
+//     const queueCounts = JSON.parse(localStorage.getItem("queueCounts")) || {};
+//     if (!queueCounts[serviceId]) {
+//         queueCounts[serviceId] = 0;
+//     }
+//     queueCounts[serviceId]++;
+//     localStorage.setItem("queueCounts", JSON.stringify(queueCounts));
 
-    return JSON.parse(history);
-}
-function getNextQueuePosition(serviceId) {
-    const queueCounts = JSON.parse(localStorage.getItem("queueCounts")) || {};
-    if (!queueCounts[serviceId]) {
-        queueCounts[serviceId] = 0;
-    }
-    queueCounts[serviceId]++;
-    localStorage.setItem("queueCounts", JSON.stringify(queueCounts));
+//     return queueCounts[serviceId];
+// }
+// function decreaseQueueCount(serviceId) {
+//     const queueCounts = JSON.parse(localStorage.getItem("queueCounts")) || {};
 
-    return queueCounts[serviceId];
-}
-function decreaseQueueCount(serviceId) {
-    const queueCounts = JSON.parse(localStorage.getItem("queueCounts")) || {};
+//     if (queueCounts[serviceId] && queueCounts[serviceId] > 0) {
+//         queueCounts[serviceId]--;
+//     }
 
-    if (queueCounts[serviceId] && queueCounts[serviceId] > 0) {
-        queueCounts[serviceId]--;
-    }
-
-    localStorage.setItem("queueCounts", JSON.stringify(queueCounts));
-}
+//     localStorage.setItem("queueCounts", JSON.stringify(queueCounts));
+// }
 // this section is added to assist in integrating the
 async function loadServicesDropdown() {
     const serviceSelect = document.getElementById("serviceSelect");
@@ -397,6 +475,7 @@ async function loadServicesDropdown() {
         }
 
         const services = await response.json();
+
 
         serviceSelect.innerHTML = `<option value="">Select a service</option>`;
         services.forEach(service => {

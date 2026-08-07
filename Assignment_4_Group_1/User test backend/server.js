@@ -236,7 +236,13 @@ app.get("/api/queue/history/:userId", async (req, res) => {
     }
 });
 const PORT = process.env.PORT || 3000;
+
 //Connection testing, if this appears we have a successful commection
-app.listen(PORT, () => {
-    console.log(`QueueSmart backend running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`QueueSmart backend running on http://localhost:${PORT}`);
+    });
+}
+
+// Export app so Supertest can test the routes.
+module.exports = app;

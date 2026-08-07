@@ -5,7 +5,7 @@
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
-const { Server } = require('socket.io'); // or standard 'ws'
+const { Server } = require('socket.io');
 
 const pool = require('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool').default;
 
@@ -13,16 +13,38 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Create the unified HTTP server
+// Create the unified HTTP server for ADMIN operations (REST + Admin WS)
 const server = http.createServer(app);
-
-// Attach WebSockets to the HTTP server
 const io = new Server(server, { cors: { origin: "*" } });
 
-class Service_Entry {
+// Create a completely separate HTTP server instance for USER-side SSE traffic
+const userApp = express();
+userApp.use(cors());
+userApp.use(express.json());
+const userServer = http.createServer(userApp);
+
+// Array to track open SSE client streams
+let userClients = [];
+
+class Queue_Entry 
+{
+  constructor(queue_entry_id, user_id, user_name, position, line_status, join_time) 
+  {
+    this.queue_entry_id = queue_entry_id;
+    this.user_id = user_id;
+    this.user_name = user_name;
+    this.position = position;
+    this.line_status = line_status;
+    this.join_time = join_time;
+  }
+}
+
+class Service_Entry 
+{
   Queue_Array = [];
 
-  constructor(service_id, name, description, expected_duration, priority, queue_length, operation_status, queue_array = []) {
+  constructor(service_id, name, description, expected_duration, priority = 2, queue_length = 0, operation_status = 'open', queue_array = []) 
+  {
     this.service_id = service_id;
     this.name = name;
     this.priority = priority;
@@ -34,48 +56,55 @@ class Service_Entry {
   }
 }
 
-function sortServicesByPriority(services) 
+function sortServicesByPriority(services) {  return services.sort((a, b) => b.priority - a.priority);  }
+
+function normalizeStatus(status) 
 {
-  return services.sort((a, b) => b.priority - a.priority);
+  const lower = String(status).toLowerCase().trim();
+  if (lower === 'close' || lower === 'closed') return 'closed';
+  return 'open';
 }
 
 async function Container_Initializer() 
 {
-  try {
-    // Execute stored procedure transaction to generate baseline dataset
-    await pool.query('CALL Mock_Initialization_Generation(30);');
+  try 
+  {
+    const Initial_Gen_Reset_Key = false;
+    /* istanbul ignore if */
+    if (Initial_Gen_Reset_Key) await pool.query('CALL Mock_Initialization_Generation(30);');
 
-    // Query aggregated service-queue view
     const [rows] = await pool.query('SELECT * FROM vw_AdminServiceQueueState;');
 
-    const Container = rows.map(row => {
-      // Parse JSON array emitted by DB view
+    const Container = rows.map(row => 
+    {
       let parsedQueue = [];
       if (typeof row.Queue_Array === 'string') 
       {
-        try { parsedQueue = JSON.parse(row.Queue_Array); } catch (e) { parsedQueue = []; }
-      } else if (Array.isArray(row.Queue_Array)) 
-      {
-        parsedQueue = row.Queue_Array;
-      }
+          try { parsedQueue = JSON.parse(row.Queue_Array); } 
+          /* istanbul ignore next */
+          catch (e) { parsedQueue = []; }
+      } 
+      /* istanbul ignore next */
+      else if (Array.isArray(row.Queue_Array)) parsedQueue = row.Queue_Array;
 
-      // Filter nulls produced by outer joins when queues are empty
       parsedQueue = parsedQueue.filter(item => item !== null);
 
       return new Service_Entry(
-        row.service_id,
-        row.name,
-        row.description,
-        Number(row.expected_duration),
-        Number(row.priority),
-        Number(row.queue_length),
-        row.operation_status,
-        parsedQueue
+          row.service_id,
+          row.name,
+          row.description,
+          Number(row.expected_duration),
+          Number(row.priority) || 2,
+          Number(row.queue_length),
+          normalizeStatus(row.operation_status || 'open'),
+          parsedQueue
       );
     });
 
     return sortServicesByPriority(Container);
-  } catch (error) {
+  } 
+  catch (error) 
+  {
     console.error('Error executing DB initialization procedure or querying view:', error.message);
     return [];
   }
@@ -83,64 +112,34 @@ async function Container_Initializer()
 
 let Services_Container = [];
 
-// Helper Function: Validation for POST and PUT payloads
 function validateServicePayload(payload) 
 {
   const { name, description, expected_duration, priority } = payload || {};
 
-  // Required Fields Check
-  if (name === undefined || name === null || String(name).trim() === '') 
-  {
-    return { valid: false, error: 'Service Name is required.' };
-  }
-  if (description === undefined || description === null || String(description).trim() === '') 
-  {
-    return { valid: false, error: 'Description is required.' };
-  }
-  if (expected_duration === undefined || expected_duration === null || String(expected_duration).trim() === '') 
-  {
-    return { valid: false, error: 'Expected Duration is required.' };
-  }
-  if (priority === undefined || priority === null || String(priority).trim() === '') 
-  {
-    return { valid: false, error: 'Priority Level is required.' };
-  }
+  if (name === undefined || name === null || String(name).trim() === '') return { valid: false, error: 'Service Name is required.' };
+  if (description === undefined || description === null || String(description).trim() === '') return { valid: false, error: 'Description is required.' };
+  if (expected_duration === undefined || expected_duration === null || String(expected_duration).trim() === '') return { valid: false, error: 'Expected Duration is required.' };
 
-  // String Length Limit Check
   const nameStr = String(name).trim();
-  if (nameStr.length > 100) 
-  {
-    return { valid: false, error: 'Service Name cannot exceed 100 characters.' };
-  }
+  if (nameStr.length > 100) return { valid: false, error: 'Service Name cannot exceed 100 characters.' };
 
-  // Expected Duration Field Type & Range Verification
   const parsedDuration = Number(expected_duration);
-  if (isNaN(parsedDuration) || parsedDuration <= 0) 
-  {
-    return { valid: false, error: 'Expected Duration must be a positive number.' };
-  }
+  if (isNaN(parsedDuration) || parsedDuration <= 0) return { valid: false, error: 'Expected Duration must be a positive number.' };
 
-  // Priority Level Field Verification (low / medium / high or numeric 1 / 2 / 3)
-  let parsedPriority;
-  switch (typeof priority) 
+  let numericPriority = 2;
+  let dbEnumPriority = 'Medium';
+  
+  if (priority !== undefined && priority !== null && String(priority).trim() !== '') 
   {
-    case 'string':
-      const lowerPrio = priority.toLowerCase().trim();
-
+      const lowerPrio = String(priority).toLowerCase().trim();
       switch (lowerPrio) 
       {
-        case 'low': case '1': parsedPriority = 1; break;
-        case 'medium': case '2': parsedPriority = 2; break;
-        case 'high': case '3': parsedPriority = 3; break;
-        default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
+          case 'low': case '1': numericPriority = 1; dbEnumPriority = 'Low'; break;
+          case 'medium': case '2': numericPriority = 2; dbEnumPriority = 'Medium'; break;
+          case 'high': case '3': numericPriority = 3; dbEnumPriority = 'High'; break;
+          /* istanbul ignore next */
+          default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
       }
-      break;
-    case 'number':
-      if (!([1, 2, 3].includes(priority))) { return { valid: false, error: 'Priority Level must be 1 (low), 2 (medium), or 3 (high).' }; }
-
-      parsedPriority = priority;
-      break;
-    default: return { valid: false, error: 'Invalid Priority Level format.' };
   }
 
   return {
@@ -149,126 +148,153 @@ function validateServicePayload(payload)
       name: nameStr,
       description: String(description).trim(),
       expected_duration: parsedDuration,
-      priority: parsedPriority
+      priority: numericPriority,
+      dbPriority: dbEnumPriority
     }
   };
 }
 
-// Functions for Dashboard
-function Status_Changer(service_id, new_status) 
+async function Status_Changer(service_id, new_status) 
 {
   const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
 
-  if (!targetService) { return null; }
+  if (!targetService) return null;
 
-  targetService.operation_status = new_status;
+  const formattedStatus = normalizeStatus(new_status);
+
+  await pool.query('CALL Service_Status_UPDATE(?, ?);', [service_id, formattedStatus]);
+  targetService.operation_status = formattedStatus;
   return targetService;
 }
 
-// Express Route to handle status changes
-app.patch('/api/admin/services/status', (req, res) => {
-  const { service_id, status } = req.body;
+// Helper to broadcast synchronization changes to Admin WebSockets and User SSE streams simultaneously
+function broadcastQueueUpdate()
+{
+  io.emit('queue_updated', Services_Container);
+  
+  const stringifiedData = JSON.stringify(Services_Container);
+  userClients.forEach(client => {  client.res.write(`data: ${stringifiedData}\n\n`);  });
+}
 
-  if (!(service_id && status)) { return res.status(400).json({ error: 'Missing service_id or status in request body.' }); }
+app.patch('/api/admin/services/status', async (req, res) => 
+{
+    const { service_id, status } = req.body;
 
-  const updatedService = Status_Changer(service_id, status);
+    if (!(service_id && status)) return res.status(400).json({ error: 'Missing service_id or status in request body.' });
 
-  if (updatedService) 
-  {
-    // Broadcast real-time update to all connected WebSocket clients
-    io.emit('queue_updated', Services_Container);
+    try 
+    {
+      const updatedService = await Status_Changer(service_id, status);
 
-    return res.status(200).json({
-      message: 'Status updated successfully',
-      service: updatedService
-    });
-  }
+      if (updatedService) 
+      {
+        broadcastQueueUpdate();
 
-  return res.status(404).json({ error: 'Service not found.' });
+        return res.status(200).json({
+          message: 'Status updated successfully',
+          service: updatedService
+        });
+      }
+
+      return res.status(404).json({ error: 'Service not found.' });
+    } 
+    catch (error) {  return res.status(500).json({ error: error.message });  }
 });
 
-// Functions and Functionality for Service Management
-// POST: Create a new service
-app.post('/api/admin/services', (req, res) => {
+app.post('/api/admin/services', async (req, res) => 
+{
   const validation = validateServicePayload(req.body);
-  if (!validation.valid) { return res.status(400).json({ error: validation.error }); }
+  if (!validation.valid) return res.status(400).json({ error: validation.error });
 
-  const { name, description, expected_duration, priority } = validation.data;
+  const { name, description, expected_duration, priority, dbPriority } = validation.data;
 
   const existingService = Services_Container.find(s => s.name === name);
-  if (existingService) { return res.status(409).json({ error: 'Service with this name already exists.' }); }
+  if (existingService) return res.status(409).json({ error: 'Service with this name already exists.' });
 
-  const newService = new Service_Entry(
-    Date.now(),
-    name,
-    description,
-    expected_duration,
-    priority,
-    0,
-    'clopen'
-  );
-
-  // Find insertion index: Place at the end of the range for equal priority
-  // Find the index of the first service with a STRICTLY LOWER priority
-  let insertIndex = Services_Container.findIndex(s => s.priority < priority);
-
-  if (insertIndex === -1) 
+  try 
   {
-    // If no service has lower priority, push to the end of the array
-    Services_Container.push(newService);
-  } else 
-  {
-    // Insert right before the first lower-priority element
-    Services_Container.splice(insertIndex, 0, newService);
-  }
+    const [rows] = await pool.query('CALL INSERT_Service(?, ?, ?, ?);', [name, description, expected_duration, dbPriority]);
+    const generatedId = rows[0][0].generated_id;
 
-  // Broadcast updated container over WebSockets
-  io.emit('queue_updated', Services_Container);
+    const newService = new Service_Entry(
+      generatedId,
+      name,
+      description,
+      expected_duration,
+      priority,
+      0
+    );
 
-  return res.status(201).json({ message: 'Service created successfully', service: newService });
+    let insertIndex = Services_Container.findIndex(s => s.priority < priority);
+
+    if (insertIndex === -1) Services_Container.push(newService);
+    else Services_Container.splice(insertIndex, 0, newService);
+
+    broadcastQueueUpdate();
+
+    return res.status(201).json({ message: 'Service created successfully', service: newService });
+  } 
+  catch (error) {  return res.status(500).json({ error: error.message });  }
 });
 
-// PUT: Update an existing service
-app.put('/api/admin/services', (req, res) => {
+app.put('/api/admin/services', async (req, res) => 
+{
   const { service_id } = req.body;
-  if (!service_id) { return res.status(400).json({ error: 'service_id is required.' }); }
+  if (!service_id) return res.status(400).json({ error: 'service_id is required.' });
 
   const validation = validateServicePayload(req.body);
-  if (!validation.valid) { return res.status(400).json({ error: validation.error }); }
+  if (!validation.valid) return res.status(400).json({ error: validation.error });
 
-  const { name, description, expected_duration, priority } = validation.data;
+  const { name, description, expected_duration, priority, dbPriority } = validation.data;
 
-  const targetService = Services_Container.find(s => String(s.service_id) === String(service_id));
-  if (!targetService) { return res.status(404).json({ error: 'Service not found.' }); }
+  const existingIndex = Services_Container.findIndex(s => String(s.service_id) === String(service_id));
+  if (existingIndex === -1) return res.status(404).json({ error: 'Service not found.' });
 
-  targetService.name = name;
-  targetService.description = description;
-  targetService.expected_duration = expected_duration;
-  targetService.priority = priority;
+  try 
+  {
+    await pool.query('CALL UPDATE_Service(?, ?, ?, ?, ?);', [service_id, name, description, expected_duration, dbPriority]);
 
-  io.emit('queue_updated', Services_Container);
+    const targetService = Services_Container[existingIndex];
+    targetService.name = name;
+    targetService.description = description;
+    targetService.expected_duration = expected_duration;
+    targetService.priority = priority;
 
-  return res.status(200).json({ message: 'Service updated successfully', service: targetService });
+    // Remove from current position and re-insert at the bottom of its target priority group
+    Services_Container.splice(existingIndex, 1);
+
+    let targetIndex = Services_Container.findIndex(s => s.priority < priority);
+    if (targetIndex === -1) Services_Container.push(targetService);
+    else Services_Container.splice(targetIndex, 0, targetService);
+
+    broadcastQueueUpdate();
+
+    return res.status(200).json({ message: 'Service updated successfully', service: targetService });
+  } 
+  catch (error) {  return res.status(500).json({ error: error.message });  }
 });
 
-// DELETE: Remove a service by service_id
-app.delete('/api/admin/services/:id', (req, res) => {
+app.delete('/api/admin/services/:id', async (req, res) => 
+{
   const serviceId = req.params.id;
 
   const index = Services_Container.findIndex(s => String(s.service_id) === String(serviceId));
-  if (index === -1) { return res.status(404).json({ error: 'Service not found.' }); }
+  if (index === -1) return res.status(404).json({ error: 'Service not found.' });
 
-  Services_Container.splice(index, 1);
+  try 
+  {
+    await pool.query('CALL DELETE_Service(?);', [serviceId]);
 
-  io.emit('queue_updated', Services_Container);
+    Services_Container.splice(index, 1);
 
-  return res.status(200).json({ message: 'Service deleted successfully' });
+    broadcastQueueUpdate();
+
+    return res.status(200).json({ message: 'Service deleted successfully' });
+  } 
+  catch (error) {  return res.status(500).json({ error: error.message });  }
 });
 
-// Express Route
-app.get('/api/admin/services', (req, res) => {
-  res.status(200).json(Services_Container);
-});
+app.get('/api/admin/services', (req, res) => {  res.status(200).json(Services_Container);  });
 
 // WebSocket Connection Logic
 // (Richard) Tells the notification service (port 3001) that a client was served, so the
@@ -276,11 +302,12 @@ app.get('/api/admin/services', (req, res) => {
 // plain string (current placeholder) it is used as the id adn if it becomes an object with
 // a userId later, that is used instead
 function notifyServed(servedClient, serviceName) {
-  if (typeof fetch !== 'function') { return; } // guard for Node < 18
+  /* istanbul ignore next */
+  if (typeof fetch !== 'function') { return; } 
   const userId = (servedClient && typeof servedClient === 'object')
     ? servedClient.userId
     : servedClient;
-  if (userId === undefined || userId === null) { return; }
+  if (!(userId !== undefined && userId !== null)) { return; }
 
   fetch('http://localhost:3001/api/notifications/served', {
     method: 'POST',
@@ -289,48 +316,154 @@ function notifyServed(servedClient, serviceName) {
   }).catch(() => { /* notification service unreachable — ignore */ });
 }
 
-io.on('connection', (socket) => {
-  console.log('Client connected to Queue WS:', socket.id);
+// -------------------------------------------------------------
+// CONNECTION HUB 1: ADMIN WEB-SOCKET PORT (Privileged Scope)
+// -------------------------------------------------------------
+io.on('connection', (socket) => 
+{
+  console.log('Admin connected to Queue WS:', socket.id);
 
-  // Send initial queue state to newly connected client
   socket.emit('queue_updated', Services_Container);
 
-  // SERVER-SIDE DISCONNECT HANDLER
-  socket.on('disconnect', (reason) => {
-    console.log(`Client disconnected from Queue WS (${socket.id}). Reason: ${reason}`);
+  socket.on('disconnect', (reason) => 
+  {
+      console.log(`Admin disconnected from Queue WS (${socket.id}). Reason: ${reason}`);
   });
 
-  // ADMIN ACTION: Serve next client (removes first person from array)
-  socket.on('serve_client', (data) => {
-    const { service_id } = data || {};
+  socket.on('serve_client', async (data) => 
+  {
+    const { service_id, queue_entry_id } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
     if (service && service.Queue_Array.length > 0) 
     {
-      const servedClient = service.Queue_Array.shift();
-      service.queue_length = service.Queue_Array.length;
-      io.emit('queue_updated', Services_Container);
+      let servedClient = null;
+      let targetIndex = -1;
 
-      notifyServed(servedClient, service.name);
+      if (queue_entry_id !== undefined && queue_entry_id !== null)
+      {
+        targetIndex = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
+      }
+      else targetIndex = 0;
+
+      if (targetIndex !== -1)
+      {
+        servedClient = service.Queue_Array.splice(targetIndex, 1)[0];
+
+        // Recalculate positions for remaining entries sequentially in memory and database
+        try 
+        {
+          for (let i = 0; i < service.Queue_Array.length; i++) 
+          {
+            const entry = service.Queue_Array[i];
+            if (entry && entry.queue_entry_id) 
+            {
+              entry.position = i + 1;
+              await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+                entry.queue_entry_id, 
+                entry.position, 
+                entry.line_status || 'waiting'
+              ]);
+            }
+          }
+        } 
+        catch (dbErr) 
+        {
+          console.error('Failed to shift remaining queue entry positions after serving:', dbErr.message);
+        }
+
+        service.queue_length = service.Queue_Array.length;
+        broadcastQueueUpdate();
+
+        const notifyPayload = (servedClient && servedClient.user_id) ? servedClient.user_id : servedClient;
+        notifyServed(notifyPayload, service.name);
+
+        // Persist serving state changes in database safely preserving historical context
+        if (servedClient && servedClient.queue_entry_id)
+        {
+          try 
+          {
+            await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+              servedClient.queue_entry_id, 
+              servedClient.position || 1, 
+              'served'
+            ]);
+          } 
+          catch (dbErr) 
+          {
+            console.error('Failed to persist served client status to database:', dbErr.message);
+          }
+        }
+      }
     }
   });
 
-  // ADMIN ACTION: Remove specific client or first client
-  socket.on('remove_client', (data) => {
-    const { service_id, client_index } = data || {};
+  socket.on('remove_client', async (data) => 
+  {
+    const { service_id, queue_entry_id } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
     if (service && service.Queue_Array.length > 0) 
     {
-      const indexToRemove = typeof client_index === 'number' ? client_index : 0;
-      service.Queue_Array.splice(indexToRemove, 1);
-      service.queue_length = service.Queue_Array.length;
-      io.emit('queue_updated', Services_Container);
+      let targetIndex = -1;
+
+      if (queue_entry_id !== undefined && queue_entry_id !== null)
+      {
+        targetIndex = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
+      }
+      else targetIndex = 0;
+
+      if (targetIndex !== -1)
+      {
+        const removedClient = service.Queue_Array.splice(targetIndex, 1)[0];
+
+        // Recalculate positions for remaining entries sequentially in memory and database
+        try 
+        {
+          for (let i = 0; i < service.Queue_Array.length; i++) 
+          {
+            const entry = service.Queue_Array[i];
+            if (entry && entry.queue_entry_id) 
+            {
+              entry.position = i + 1;
+              await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+                entry.queue_entry_id, 
+                entry.position, 
+                entry.line_status || 'waiting'
+              ]);
+            }
+          }
+        } 
+        catch (dbErr) 
+        {
+          console.error('Failed to shift remaining queue entry positions after removal:', dbErr.message);
+        }
+
+        service.queue_length = service.Queue_Array.length;
+        broadcastQueueUpdate();
+
+        // Persist removal in database safely preserving historical context
+        if (removedClient && removedClient.queue_entry_id)
+        {
+          try 
+          {
+            await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+              removedClient.queue_entry_id, 
+              removedClient.position || 1, 
+              'canceled'
+            ]);
+          } 
+          catch (dbErr) 
+          {
+            console.error('Failed to persist client removal to database:', dbErr.message);
+          }
+        }
+      }
     }
   });
 
-  // ADMIN ACTION: Drag & Drop Reorder
-  socket.on('reorder_queue', (data) => {
+  socket.on('reorder_queue', async (data) => 
+  {
     const { service_id, updated_queue } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
@@ -338,52 +471,115 @@ io.on('connection', (socket) => {
     {
       service.Queue_Array = updated_queue;
       service.queue_length = service.Queue_Array.length;
-      io.emit('queue_updated', Services_Container);
-    }
-  });
 
-  // USER ACTION: Join Queue voluntarily
-  socket.on('join_queue', (data) => {
-    const { service_id, client_name } = data || {};
-    const service = Services_Container.find(s => String(s.service_id) === String(service_id));
-
-    if (service && client_name) 
-    {
-      service.Queue_Array.push(client_name);
-      service.queue_length = service.Queue_Array.length;
-      io.emit('queue_updated', Services_Container);
-    }
-  });
-
-  // USER ACTION: Leave Queue voluntarily
-  socket.on('leave_queue', (data) => {
-    const { service_id, client_name } = data || {};
-    const service = Services_Container.find(s => String(s.service_id) === String(service_id));
-    if (service && client_name) 
-    {
-      const index = service.Queue_Array.indexOf(client_name);
-
-      if (index !== -1) 
+      // Update positions for each entry sequentially in DB
+      try 
       {
-        service.Queue_Array.splice(index, 1);
-        service.queue_length = service.Queue_Array.length;
-        io.emit('queue_updated', Services_Container);
+        for (let i = 0; i < service.Queue_Array.length; i++) 
+        {
+          const entry = service.Queue_Array[i];
+          if (entry && entry.queue_entry_id) 
+          {
+            entry.position = i + 1;
+            await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [entry.queue_entry_id, entry.position, 'waiting']);
+          }
+        }
+      } 
+      catch (dbErr) 
+      {
+        console.error('Failed to persist queue reordering to database:', dbErr.message);
       }
+
+      broadcastQueueUpdate();
     }
   });
 });
 
-// Function to start the server programmatically
-async function startServer(port = 3000) {
+// -------------------------------------------------------------
+// CONNECTION HUB 2: USER SERVER-SENT EVENTS ROUTER (Public Scope)
+// -------------------------------------------------------------
+userApp.get('/api/users/queue/stream', (req, res) => 
+{
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const clientId = Date.now();
+  const newClient = { id: clientId, res };
+  userClients.push(newClient);
+
+  console.log(`Public User stream connected via SSE. Stream Count: ${userClients.length}`);
+
+  // Push instant baseline state upon connection
+  res.write(`data: ${JSON.stringify(Services_Container)}\n\n`);
+
+  req.on('close', () => 
+  {
+    userClients = userClients.filter(client => client.id !== clientId);
+    console.log(`Public User stream disconnected from SSE. Stream Count: ${userClients.length}`);
+  });
+});
+
+userApp.post('/api/users/queue/join', (req, res) => 
+{
+  const { service_id, client_entry } = req.body || {};
+  const service = Services_Container.find(s => String(s.service_id) === String(service_id));
+
+  if (!service) return res.status(404).json({ error: 'Service target not found.' });
+  if (!client_entry) return res.status(400).json({ error: 'Missing client entry data.' });
+
+  service.Queue_Array.push(client_entry);
+  service.queue_length = service.Queue_Array.length;
+  broadcastQueueUpdate();
+
+  return res.status(200).json({ message: 'Joined successfully.' });
+});
+
+userApp.post('/api/users/queue/leave', (req, res) => 
+{
+  const { service_id, queue_entry_id } = req.body || {};
+  const service = Services_Container.find(s => String(s.service_id) === String(service_id));
+  
+  if (!service) return res.status(404).json({ error: 'Service target not found.' });
+  if (queue_entry_id === undefined || queue_entry_id === null) return res.status(400).json({ error: 'Missing queue entry identifier.' });
+
+  const index = service.Queue_Array.findIndex(item => item && String(item.queue_entry_id) === String(queue_entry_id));
+
+  /* istanbul ignore else */
+  if (index !== -1) 
+  {
+    service.Queue_Array.splice(index, 1);
+    service.queue_length = service.Queue_Array.length;
+    broadcastQueueUpdate();
+    return res.status(200).json({ message: 'Left queue successfully.' });
+  }
+
+  return res.status(404).json({ error: 'Queue entry not found within service.' });
+});
+
+async function startServer(adminPort = 3000, userPort = 3005) 
+{
   Services_Container = await Container_Initializer();
-  return server.listen(port, () => {
-    console.log(`AdminBackend (HTTP + WebSockets) listening on port ${port}`);
+  
+  // Start the User listener channel
+  userServer.listen(userPort, () => {
+    console.log(`User Queue SSE Event stream listening on port ${userPort}`);
+  });
+
+  // Start the Admin listener channel
+  return server.listen(adminPort, () => 
+  {
+    console.log(`AdminBackend (HTTP + WebSockets) listening on port ${adminPort}`);
   });
 }
 
-// Automatically start if executed directly via Node (`node AdminBackend.js`)
-/* istanbul ignore next*/
-if (require.main === module) {  startServer(3000);  }
+/* istanbul ignore next */
+if (require.main === module) startServer(3000, 3005);
 
-// Export for Jest testing
-module.exports = { app, server, io, startServer, Service_Entry, Container_Initializer, Status_Changer };
+module.exports = { 
+  app, server, userServer, io, userApp, 
+  startServer, 
+  Service_Entry, Queue_Entry, 
+  Container_Initializer, 
+  Status_Changer 
+};
