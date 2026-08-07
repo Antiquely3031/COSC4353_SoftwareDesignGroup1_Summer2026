@@ -9,6 +9,7 @@ DROP PROCEDURE IF EXISTS Service_Status_UPDATE;
 DROP PROCEDURE IF EXISTS INSERT_Service;
 DROP PROCEDURE IF EXISTS UPDATE_Service;
 DROP PROCEDURE IF EXISTS DELETE_Service;
+DROP PROCEDURE IF EXISTS UPDATE_Queue_Entry;
 
 -- Mock Data Generation
 -- Procedure: Populate Services
@@ -194,14 +195,14 @@ BEGIN
     START TRANSACTION;
         DELETE FROM Service WHERE service_id = targeted_service_id;
     COMMIT;
-END
+END;
 
 -- Admin Queue Management Transactions
 CREATE PROCEDURE UPDATE_Queue_Entry
 (
     IN targeted_queue_entry_id INT,
     IN targeted_position INT,
-    IN targeted_status INT
+    IN targeted_status ENUM('waiting', 'served', 'canceled')
 )
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -211,8 +212,8 @@ BEGIN
     END;
 
     START TRANSACTION;
-        UPDATE Queue_Entry
-        SET position = targeted_position, status = targeted_status
+        UPDATE QueueEntry
+        SET position = targeted_position, status = COALESCE(targeted_status, 'waiting')
         WHERE queue_entry_id = targeted_queue_entry_id;
     COMMIT;
 END

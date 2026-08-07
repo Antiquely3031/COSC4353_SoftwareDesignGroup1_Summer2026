@@ -330,7 +330,7 @@ io.on('connection', (socket) =>
       console.log(`Admin disconnected from Queue WS (${socket.id}). Reason: ${reason}`);
   });
 
-  socket.on('serve_client', (data) => 
+  socket.on('serve_client', async (data) => 
   {
     const { service_id, queue_entry_id } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
@@ -349,16 +349,56 @@ io.on('connection', (socket) =>
       if (targetIndex !== -1)
       {
         servedClient = service.Queue_Array.splice(targetIndex, 1)[0];
+
+        // Recalculate positions for remaining entries sequentially in memory and database
+        try 
+        {
+          for (let i = 0; i < service.Queue_Array.length; i++) 
+          {
+            const entry = service.Queue_Array[i];
+            if (entry && entry.queue_entry_id) 
+            {
+              entry.position = i + 1;
+              await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+                entry.queue_entry_id, 
+                entry.position, 
+                entry.line_status || 'waiting'
+              ]);
+            }
+          }
+        } 
+        catch (dbErr) 
+        {
+          console.error('Failed to shift remaining queue entry positions after serving:', dbErr.message);
+        }
+
         service.queue_length = service.Queue_Array.length;
         broadcastQueueUpdate();
 
         const notifyPayload = (servedClient && servedClient.user_id) ? servedClient.user_id : servedClient;
         notifyServed(notifyPayload, service.name);
+
+        // Persist serving state changes in database safely preserving historical context
+        if (servedClient && servedClient.queue_entry_id)
+        {
+          try 
+          {
+            await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+              servedClient.queue_entry_id, 
+              servedClient.position || 1, 
+              'served'
+            ]);
+          } 
+          catch (dbErr) 
+          {
+            console.error('Failed to persist served client status to database:', dbErr.message);
+          }
+        }
       }
     }
   });
 
-  socket.on('remove_client', (data) => 
+  socket.on('remove_client', async (data) => 
   {
     const { service_id, queue_entry_id } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
@@ -375,14 +415,54 @@ io.on('connection', (socket) =>
 
       if (targetIndex !== -1)
       {
-        service.Queue_Array.splice(targetIndex, 1);
+        const removedClient = service.Queue_Array.splice(targetIndex, 1)[0];
+
+        // Recalculate positions for remaining entries sequentially in memory and database
+        try 
+        {
+          for (let i = 0; i < service.Queue_Array.length; i++) 
+          {
+            const entry = service.Queue_Array[i];
+            if (entry && entry.queue_entry_id) 
+            {
+              entry.position = i + 1;
+              await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+                entry.queue_entry_id, 
+                entry.position, 
+                entry.line_status || 'waiting'
+              ]);
+            }
+          }
+        } 
+        catch (dbErr) 
+        {
+          console.error('Failed to shift remaining queue entry positions after removal:', dbErr.message);
+        }
+
         service.queue_length = service.Queue_Array.length;
         broadcastQueueUpdate();
+
+        // Persist removal in database safely preserving historical context
+        if (removedClient && removedClient.queue_entry_id)
+        {
+          try 
+          {
+            await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+              removedClient.queue_entry_id, 
+              removedClient.position || 1, 
+              'canceled'
+            ]);
+          } 
+          catch (dbErr) 
+          {
+            console.error('Failed to persist client removal to database:', dbErr.message);
+          }
+        }
       }
     }
   });
 
-  socket.on('reorder_queue', (data) => 
+  socket.on('reorder_queue', async (data) => 
   {
     const { service_id, updated_queue } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
@@ -391,6 +471,25 @@ io.on('connection', (socket) =>
     {
       service.Queue_Array = updated_queue;
       service.queue_length = service.Queue_Array.length;
+
+      // Update positions for each entry sequentially in DB
+      try 
+      {
+        for (let i = 0; i < service.Queue_Array.length; i++) 
+        {
+          const entry = service.Queue_Array[i];
+          if (entry && entry.queue_entry_id) 
+          {
+            entry.position = i + 1;
+            await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [entry.queue_entry_id, entry.position, 'waiting']);
+          }
+        }
+      } 
+      catch (dbErr) 
+      {
+        console.error('Failed to persist queue reordering to database:', dbErr.message);
+      }
+
       broadcastQueueUpdate();
     }
   });

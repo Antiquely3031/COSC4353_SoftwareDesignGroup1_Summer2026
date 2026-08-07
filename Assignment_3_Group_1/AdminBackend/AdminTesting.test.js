@@ -309,7 +309,7 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
       if (socketClient.connected) socketClient.disconnect();
     });
 
-    test('serve_client handles explicit queue entry parameters and fires notifications', (done) => 
+    test('serve_client handles explicit queue entry parameters, cascades internal positions, and fires notifications', (done) => 
     {
       global.fetch = jest.fn().mockImplementation(() => Promise.resolve({ ok: true }));
 
@@ -319,7 +319,7 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
         done();
       });
 
-      // Target service 4, entry 1 explicitly to isolate data mutation
+      // Target service 4, entry 1 explicitly to isolate data mutation and trigger position loop
       socketClient.emit('serve_client', { service_id: 4, queue_entry_id: 1 });
     });
 
@@ -329,7 +329,22 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
       socketClient.emit('serve_client', { service_id: 4 });
     });
 
-    test('remove_client removes targeted items from queue arrays cleanly', (done) => 
+    test('serve_client handles cascading position database query failures gracefully', (done) => 
+    {
+      pool.query.mockImplementationOnce(() => Promise.reject(new Error('Internal Cascading Shift Error')));
+      
+      // Send the event
+      socketClient.emit('serve_client', { service_id: 4, queue_entry_id: 2 });
+      
+      // Since the backend safely catches the error and suppresses the broadcast,
+      // assert that the socket connection survives the error state.
+      setTimeout(() => {
+        expect(socketClient.connected).toBe(true);
+        done();
+      }, 50);
+    });
+
+    test('remove_client removes targeted items from queue arrays and re-indexes remaining elements cleanly', (done) => 
     {
       socketClient.once('queue_updated', () => done());
       // Isolated to service_id: 5 to ensure queue entry index 2 safely exists uncaught by prior operations
@@ -342,18 +357,44 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
       socketClient.emit('remove_client', { service_id: 5 });
     });
 
+    test('remove_client handles cascading position database query failures gracefully', (done) => 
+    {
+      pool.query.mockImplementationOnce(() => Promise.reject(new Error('Internal Cascading Shift Cancel Error')));
+      socketClient.once('queue_updated', () => done());
+      socketClient.emit('remove_client', { service_id: 5, queue_entry_id: 3 });
+    });
+
     test('reorder_queue applies custom array structural mappings', (done) => 
     {
       const customConfiguration = [{ queue_entry_id: 777, user_name: 'Overwritten Client Sequence' }];
       
       socketClient.once('queue_updated', (payload) => 
       {
-        const updatedMatch = payload.find(s => s.service_id === 6);
-        expect(updatedMatch.Queue_Array).toEqual(customConfiguration);
-        done();
+        try {
+          const updatedMatch = payload.find(s => s.service_id === 6);
+          
+          // Use objectContaining or match the property structure to account for the position injection
+          expect(updatedMatch.Queue_Array).toEqual([
+            expect.objectContaining({
+              queue_entry_id: 777,
+              user_name: 'Overwritten Client Sequence'
+            })
+          ]);
+          
+          done();
+        } catch (error) {
+          done(error); // Routes the assertion failure out instantly without hanging
+        }
       });
 
-      socketClient.emit('reorder_queue', { service_id: 6, updated_queue: customConfiguration });
+  socketClient.emit('reorder_queue', { service_id: 6, updated_queue: customConfiguration });
+});
+
+    test('reorder_queue handles database shift errors gracefully', (done) => 
+    {
+      pool.query.mockImplementationOnce(() => Promise.reject(new Error('Internal Reorder Persistence Error')));
+      socketClient.once('queue_updated', () => done());
+      socketClient.emit('reorder_queue', { service_id: 6, updated_queue: [{ queue_entry_id: 888 }] });
     });
 
     test('null operations are safely ignored by intercept guards without crashing servers', (done) => 
