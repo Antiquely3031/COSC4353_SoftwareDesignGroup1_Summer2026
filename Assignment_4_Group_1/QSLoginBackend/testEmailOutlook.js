@@ -2,9 +2,7 @@ require('dotenv').config();
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp-mail.outlook.com',
-  port: 587,
-  secure: false,
+  service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
@@ -18,7 +16,7 @@ transporter.sendMail({
   from: process.env.EMAIL_USER,
   to: process.env.EMAIL_USER,
   subject: 'Test email',
-  text: 'If you see this, Outlook SMTP is working.'
+  text: 'If you see this, Gmail is working again.'
 }, (err, info) => {
   if (err) console.error(err);
   else console.log('Email sent:', info.response);
