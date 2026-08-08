@@ -1,0 +1,14 @@
+{
+  "testEnvironment": "node",
+  "verbose": true,
+  "collectCoverage": true,
+  "coverageDirectory": "./coverage",
+  "collectCoverageFrom": [
+    "QSNotification*.js",
+    "!QSNotification*.test.js"
+  ],
+  "coveragePathIgnorePatterns": [
+    "/node_modules/",
+    "testUtils.js"
+  ]
+}
