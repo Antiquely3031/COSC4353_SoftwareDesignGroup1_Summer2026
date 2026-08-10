@@ -1,11 +1,7 @@
 USE QueueSmartDB;
 
--- Drop existing view if present
 DROP VIEW IF EXISTS vw_AdminServiceQueueState;
 
--- View: vw_AdminServiceQueueState
--- Purpose: Consolidates service profiles with their active queue entries mapping rich objects
--- and guarantees proper position sorting via a localized sorted subquery optimization barrier.
 CREATE VIEW vw_AdminServiceQueueState AS
 SELECT 
     s.service_id,
@@ -25,7 +21,7 @@ SELECT
                 JSON_OBJECT(
                     'queue_entry_id', t.queue_entry_id,
                     'user_id', t.user_id,
-                    'user_name', CONCAT('Person ', t.queue_entry_id),
+                    'user_name', u.name,
                     'position', t.position,
                     'line_status', t.status,
                     'join_time', t.join_time
@@ -37,6 +33,7 @@ SELECT
                 ORDER BY position ASC
                 LIMIT 18446744073709551615
             ) t
+            JOIN UserCredentials u ON t.user_id = u.user_id
             WHERE t.queue_id = q.queue_id
         ),
         JSON_ARRAY()

@@ -90,14 +90,14 @@ async function Container_Initializer()
       parsedQueue = parsedQueue.filter(item => item !== null);
 
       return new Service_Entry(
-          row.service_id,
-          row.name,
-          row.description,
-          Number(row.expected_duration),
-          Number(row.priority) || 2,
-          Number(row.queue_length),
-          normalizeStatus(row.operation_status || 'open'),
-          parsedQueue
+        row.service_id,
+        row.name,
+        row.description,
+        Number(row.expected_duration),
+        Number(row.priority) || 2,
+        Number(row.queue_length),
+        normalizeStatus(row.operation_status || 'open'),
+        parsedQueue
       );
     });
 
@@ -131,15 +131,15 @@ function validateServicePayload(payload)
   
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') 
   {
-      const lowerPrio = String(priority).toLowerCase().trim();
-      switch (lowerPrio) 
-      {
-          case 'low': case '1': numericPriority = 1; dbEnumPriority = 'Low'; break;
-          case 'medium': case '2': numericPriority = 2; dbEnumPriority = 'Medium'; break;
-          case 'high': case '3': numericPriority = 3; dbEnumPriority = 'High'; break;
-          /* istanbul ignore next */
-          default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
-      }
+    const lowerPrio = String(priority).toLowerCase().trim();
+    switch (lowerPrio) 
+    {
+      case 'low': case '1': numericPriority = 1; dbEnumPriority = 'Low'; break;
+      case 'medium': case '2': numericPriority = 2; dbEnumPriority = 'Medium'; break;
+      case 'high': case '3': numericPriority = 3; dbEnumPriority = 'High'; break;
+      /* istanbul ignore next */
+      default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
+    }
   }
 
   return {
@@ -178,27 +178,27 @@ function broadcastQueueUpdate()
 
 app.patch('/api/admin/services/status', async (req, res) => 
 {
-    const { service_id, status } = req.body;
+  const { service_id, status } = req.body;
 
-    if (!(service_id && status)) return res.status(400).json({ error: 'Missing service_id or status in request body.' });
+  if (!(service_id && status)) return res.status(400).json({ error: 'Missing service_id or status in request body.' });
 
-    try 
+  try 
+  {
+    const updatedService = await Status_Changer(service_id, status);
+
+    if (updatedService) 
     {
-      const updatedService = await Status_Changer(service_id, status);
+      broadcastQueueUpdate();
 
-      if (updatedService) 
-      {
-        broadcastQueueUpdate();
+      return res.status(200).json({
+        message: 'Status updated successfully',
+        service: updatedService
+      });
+    }
 
-        return res.status(200).json({
-          message: 'Status updated successfully',
-          service: updatedService
-        });
-      }
-
-      return res.status(404).json({ error: 'Service not found.' });
-    } 
-    catch (error) {  return res.status(500).json({ error: error.message });  }
+    return res.status(404).json({ error: 'Service not found.' });
+  } 
+  catch (error) {  return res.status(500).json({ error: error.message });  }
 });
 
 app.post('/api/admin/services', async (req, res) => 
