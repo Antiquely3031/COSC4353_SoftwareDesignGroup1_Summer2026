@@ -1,20 +1,19 @@
 let currentSelectedServiceId = null;
+let globalServicesState = [];
 
 // Startup
-document.addEventListener("ServicesRendered", (event) => {
+document.addEventListener("ServicesRendered", (event) => 
+{
     // Service List
-    const Services = event.detail.services;
-    const Button_List = document.querySelectorAll('.scroll-list-box ul li');
-
-    Button_List.forEach((li, index) => {
-        const Button = li.querySelector('button');
-        Button.dataset.serviceId = Services[index].service_id;
-        Button.onclick = function() { Service_Selected(Button, Services[index]); };
-    });
+    globalServicesState = event.detail.services;
+    Render_Service_List(globalServicesState);
 
     // Form quieter
     const Queue_Form = document.querySelector('form');
-    Queue_Form.addEventListener('submit', (event) => { event.preventDefault(); });
+    if (Queue_Form) 
+    {
+        Queue_Form.addEventListener('submit', (e) => { e.preventDefault(); });
+    }
 
     // Action Buttons
     const Create_Button = document.getElementById('ABATSSB-create');
@@ -22,33 +21,50 @@ document.addEventListener("ServicesRendered", (event) => {
     const Delete_Button = document.getElementById('ABATSSB-delete');
     const Deselect_Button = document.getElementById('AB-Deselect');
 
-    Create_Button.addEventListener('click', () => Handle_Service_Action('POST'));
-    Save_Button.addEventListener('click', () => Handle_Service_Action('PUT'));
-    Delete_Button.addEventListener('click', Handle_Service_Delete);
-    Deselect_Button.addEventListener('click', Clear_Form_Fields);
+    if (Create_Button) Create_Button.addEventListener('click', () => Handle_Service_Action('POST'));
+    if (Save_Button) Save_Button.addEventListener('click', () => Handle_Service_Action('PUT'));
+    if (Delete_Button) Delete_Button.addEventListener('click', Handle_Service_Delete);
+    if (Deselect_Button) Deselect_Button.addEventListener('click', Clear_Form_Fields);
 });
+
+// WebSocket Real-time Event Listener
+if (typeof io !== 'undefined') 
+{
+    const socket = io('http://localhost:3000');
+
+    socket.on('queue_updated', (updatedServices) => 
+    {
+        globalServicesState = updatedServices;
+        Render_Service_List(globalServicesState);
+    });
+}
 
 // Functions
 
 function Service_Selected(Service_Button, service) 
 {
+    if (!service) return;
+
     currentSelectedServiceId = service.service_id;
 
     const Text_Field = document.getElementById('name-field');
-    Text_Field.value = service.name;
+    if (Text_Field) Text_Field.value = service.name;
 
     const Description_Field = document.querySelector('textarea');
-    Description_Field.value = service.description;
+    if (Description_Field) Description_Field.value = service.description;
 
     const Time_Field = document.getElementById('expection-time-field');
-    Time_Field.value = service.expected_duration;
+    if (Time_Field) Time_Field.value = service.expected_duration;
 
-    const Priority_Radios = [...document.querySelectorAll('input[type="radio"]')];
-    switch(service.priority) 
+    const Priority_Radios = [...document.querySelectorAll('input[name="priority-status"]')];
+    if (Priority_Radios.length >= 3) 
     {
-        case 1: Priority_Radios[0].checked = true; break;
-        case 2: Priority_Radios[1].checked = true; break;
-        case 3: Priority_Radios[2].checked = true; break;
+        switch(service.priority) 
+        {
+            case 1: Priority_Radios[0].checked = true; break;
+            case 2: Priority_Radios[1].checked = true; break;
+            case 3: Priority_Radios[2].checked = true; break;
+        }
     }
 }
 
@@ -63,7 +79,11 @@ function Render_Service_List(Services)
     // Ensure list is sorted High to Low (3 -> 2 -> 1)
     const sortedServices = [...Services].sort((a, b) => b.priority - a.priority);
 
-    sortedServices.forEach((service) => {
+    let selectedServiceStillExists = false;
+    let freshSelectedService = null;
+
+    sortedServices.forEach((service) => 
+    {
         const li = document.createElement('li');
         const button = document.createElement('button');
 
@@ -75,23 +95,42 @@ function Render_Service_List(Services)
 
         li.appendChild(button);
         Scroll_Box_UL.appendChild(li);
+
+        // Fixed variable name check (currentSelectedServiceId instead of currentSelectedId)
+        if (currentSelectedServiceId && String(service.service_id) === String(currentSelectedServiceId)) 
+        {
+            selectedServiceStillExists = true;
+            freshSelectedService = service;
+        }
     });
+
+    // Refresh active form input fields if selected service was updated remotely
+    if (selectedServiceStillExists && freshSelectedService) 
+    {
+        const Selected_Button = document.querySelector(`button[data-service-id="${freshSelectedService.service_id}"]`);
+        Service_Selected(Selected_Button, freshSelectedService);
+    } 
+    else if (currentSelectedServiceId && !selectedServiceStillExists) 
+    {
+        // Clear inputs if selected service was deleted by another admin
+        Clear_Form_Fields();
+    }
 }
 
 function Get_Selected_Priority() 
 {
     const Priority_Radios = [...document.querySelectorAll('input[name="priority-status"]')];
 
-    for(let index = 0; index < 3; index++) { if(Priority_Radios[index]?.checked) { return index + 1; } }
+    for(let index = 0; index < 3; index++) if(Priority_Radios[index]?.checked) return index + 1;
     
-    return 1;
+    return 2;
 }
 
 // Send Create (POST) or Save (PUT) actions
 async function Handle_Service_Action(method) 
 {
     const name = document.getElementById('name-field').value.trim();
-    const description = document.getElementById('description-box').value.trim();
+    const description = document.querySelector('textarea').value.trim();
     const expected_duration = document.getElementById('expection-time-field').value;
     const priority = Get_Selected_Priority();
 
@@ -113,11 +152,10 @@ async function Handle_Service_Action(method)
             body: JSON.stringify(payload)
         });
 
-        if (response.ok) {
-            Clear_Form_Fields();
-            Refresh_Services_In_Place();
-        } else { console.error(`Failed to ${method} service:`, response.statusText); }
-    } catch (error) { console.error('Network error modifying service:', error); }
+        if (response.ok) Clear_Form_Fields();
+        else console.error(`Failed to ${method} service:`, response.statusText); 
+    } 
+    catch (error) {    console.error('Network error modifying service:', error);     }
 }
 
 // Send Delete (DELETE) action
@@ -130,27 +168,16 @@ async function Handle_Service_Delete()
         const response = await fetch(`http://localhost:3000/api/admin/services/${encodeURIComponent(currentSelectedServiceId)}`, 
         { method: 'DELETE' });
 
-        if (response.ok) 
-        {
-            Clear_Form_Fields();
-            Refresh_Services_In_Place();
-        } else { console.error('Failed to delete service:', response.statusText); }
-    } catch (error) { console.error('Network error deleting service:', error); }
-}
-
-// Re-fetch services from backend and update DOM smoothly
-async function Refresh_Services_In_Place() 
-{
-    try 
-    {
-        const res = await fetch('http://localhost:3000/api/admin/services');
-        const services = await res.json();
-        Render_Service_List(services);
-    } catch (err) { console.error('Error refreshing service list:', err); }
+        if (response.ok) Clear_Form_Fields();
+        else console.error('Failed to delete service:', response.statusText);
+    } 
+    catch (error) {    console.error('Network error deleting service:', error);    }
 }
 
 // Reset form inputs
-function Clear_Form_Fields() { 
+function Clear_Form_Fields() 
+{ 
     currentSelectedServiceId = null;
-    document.getElementById('service-detial-form').reset(); 
+    const form = document.getElementById('service-detial-form');
+    if (form) form.reset(); 
 }
