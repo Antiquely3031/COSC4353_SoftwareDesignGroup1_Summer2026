@@ -109,6 +109,7 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
 const request = require('supertest');
 const ioClient = require('socket.io-client');
 const http = require('http');
+const fs = require('fs');
 const pool = require('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool').default;
 const { 
   startServer, 
@@ -116,6 +117,7 @@ const {
   Queue_Entry, 
   Container_Initializer, 
   Status_Changer,
+  Precompile_ProViews,
   userServer,
   server
 } = require('./QSAdminBackend');
@@ -167,6 +169,64 @@ describe('Structural Data & Model Unit Tests', () =>
     pool.query.mockImplementationOnce(() => Promise.reject(new Error('Forced Fatal Database Breakdown')));
     const result = await Container_Initializer();
     expect(result).toEqual([]);
+  });
+});
+
+describe('Database Migration & Precompilation Operations', () => {
+  let readFileSyncSpy;
+  let consoleLogSpy;
+  let consoleErrorSpy;
+  let originalQueryMock; // Store the original mock here
+
+  beforeEach(() => {
+    // Save the global mock implementation before overwriting it
+    originalQueryMock = pool.query.getMockImplementation();
+
+    readFileSyncSpy = jest.spyOn(fs, 'readFileSync').mockImplementation((filePath) => {
+      if (filePath.includes('QSAdminDBQuey.sql')) {
+        return 'USE QueueSmartDB; DROP VIEW IF EXISTS vw_Test; CREATE VIEW vw_Test AS SELECT * FROM Tbl;';
+      }
+      if (filePath.includes('QSAdminDBTransAct.sql')) {
+        return 'USE QueueSmartDB; DROP PROCEDURE IF EXISTS Mock_Init; CREATE PROCEDURE Mock_Init() BEGIN SELECT 1; END;';
+      }
+      return '';
+    });
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    readFileSyncSpy.mockRestore();
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    
+    // Restore the original baseline mock implementation for downstream suites
+    if (originalQueryMock) {
+      pool.query.mockImplementation(originalQueryMock);
+    }
+  });
+
+  test('Precompile_ProViews reads SQL structures, parses schemas using delimiter filters, and updates components', async () => {
+    pool.query.mockImplementation(() => Promise.resolve());
+    
+    await Precompile_ProViews();
+
+    expect(readFileSyncSpy).toHaveBeenCalledTimes(2);
+    expect(pool.query).toHaveBeenCalled();
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Successfully precompiled database views and stored procedures')
+    );
+  });
+
+  test('Precompile_ProViews catches system and filesystem runtime exceptions gracefully', async () => {
+    pool.query.mockImplementation(() => Promise.reject(new Error('Precompile Execution Failure Simulation')));
+
+    await Precompile_ProViews();
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to precompile database views and procedures:'),
+      expect.any(String)
+    );
   });
 });
 

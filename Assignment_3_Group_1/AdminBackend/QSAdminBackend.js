@@ -65,6 +65,47 @@ function normalizeStatus(status)
   return 'open';
 }
 
+async function Precompile_ProViews() 
+{
+  try 
+  {
+    const fs = require('fs');
+    const path = require('path');
+
+    // Read and convert sql from the two sql files into strings
+    const viewsFilePath = path.join(__dirname, '../../Assignment_4_Group_1/QSAdminDB/QSAdminDBQuey.sql');
+    const procsFilePath = path.join(__dirname, '../../Assignment_4_Group_1/QSAdminDB/QSAdminDBTransAct.sql');
+
+    const viewsSql = fs.readFileSync(viewsFilePath, 'utf8');
+    const procsSql = fs.readFileSync(procsFilePath, 'utf8');
+
+    // Process and execute Views (safe to split by semicolon)
+    const cleanViewsSql = viewsSql.replace(/USE\s+[^;]+;/gi, '').trim();
+    const viewStatements = cleanViewsSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    for (const statement of viewStatements) {
+      await pool.query(statement);
+    }
+
+    // Process Stored Procedures
+    const cleanProcsSql = procsSql.replace(/USE\s+[^;]+;/gi, '').trim();
+    
+    // Split by custom delimiter logic or break clean blocks by catching drops vs full CREATE blocks
+    // Using a regex splitter that separates standard single-line statements from block chunks
+    const procStatements = cleanProcsSql
+      .split(/(?=DROP PROCEDURE)|(?=CREATE PROCEDURE)/gi)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    for (const statement of procStatements) {
+      await pool.query(statement);
+    }
+
+    console.log('Successfully precompiled database views and stored procedures.');
+  } catch (DBMS_error) {
+    console.error('Failed to precompile database views and procedures:', DBMS_error.message);
+  }
+}
+
 async function Container_Initializer() 
 {
   try 
@@ -537,6 +578,7 @@ userApp.post('/api/users/queue/leave', (req, res) =>
 
 async function startServer(adminPort = 3000, userPort = 3005) 
 {
+  await Precompile_ProViews();
   Services_Container = await Container_Initializer();
   
   // Start the User listener channel
@@ -558,6 +600,6 @@ module.exports = {
   app, server, userServer, io, userApp, 
   startServer, 
   Service_Entry, Queue_Entry, 
-  Container_Initializer, 
+  Container_Initializer, Precompile_ProViews, 
   Status_Changer 
 };
