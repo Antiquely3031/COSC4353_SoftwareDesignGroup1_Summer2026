@@ -21,19 +21,29 @@ SELECT
                 JSON_OBJECT(
                     'queue_entry_id', t.queue_entry_id,
                     'user_id', t.user_id,
-                    'user_name', u.name,
+                    'user_name', t.user_name,
                     'position', t.position,
-                    'line_status', t.status,
+                    'line_status', t.line_status,
                     'join_time', t.join_time
                 )
             )
             FROM (
-                SELECT * FROM QueueEntry 
-                WHERE status = 'waiting' 
-                ORDER BY position ASC
+                -- Join and order elements together inside the derived block to guarantee alignment
+                SELECT 
+                    qe.queue_id,
+                    qe.queue_entry_id,
+                    qe.user_id,
+                    u.name AS user_name,
+                    qe.position,
+                    qe.status AS line_status,
+                    qe.join_time
+                FROM QueueEntry qe
+                JOIN UserCredentials u ON qe.user_id = u.user_id
+                WHERE qe.status = 'waiting'
+                ORDER BY qe.position ASC
                 LIMIT 18446744073709551615
             ) t
-            JOIN UserCredentials u ON t.user_id = u.user_id
+            -- Strictly correlate the ordered rows to the active outer service queue
             WHERE t.queue_id = q.queue_id
         ),
         JSON_ARRAY()
