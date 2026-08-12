@@ -15,6 +15,7 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'QueueSmartDB',
+  multipleStatements: true,
   waitForConnections: true,
   connectionLimit: 100,
   queueLimit: 0

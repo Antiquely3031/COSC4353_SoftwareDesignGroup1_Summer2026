@@ -84,7 +84,7 @@ function Reset_Selection_Panel()
 // WebSocket Live Sync Listener
 if (typeof io !== 'undefined')
 {
-  const socket = io('http://localhost:3000');
+  const socket = io('http://localhost:4000');
 
   socket.on('queue_updated', (updatedServices) => 
   {
@@ -115,7 +115,7 @@ async function Operation_Status_Sender(service_id, status)
 {
   try 
   {
-    const response = await fetch('http://localhost:3000/api/admin/services/status', 
+    const response = await fetch('http://localhost:4000/api/admin/services/status', 
     {
       method: 'PATCH',
       headers: {

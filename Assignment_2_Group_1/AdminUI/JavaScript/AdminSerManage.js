@@ -30,7 +30,7 @@ document.addEventListener("ServicesRendered", (event) =>
 // WebSocket Real-time Event Listener
 if (typeof io !== 'undefined') 
 {
-    const socket = io('http://localhost:3000');
+    const socket = io('http://localhost:4000');
 
     socket.on('queue_updated', (updatedServices) => 
     {
@@ -145,7 +145,7 @@ async function Handle_Service_Action(method)
 
     try 
     {
-        const response = await fetch('http://localhost:3000/api/admin/services', 
+        const response = await fetch('http://localhost:4000/api/admin/services', 
         {
             method: method,
             headers: { 'Content-Type': 'application/json' },
@@ -165,7 +165,7 @@ async function Handle_Service_Delete()
 
     try 
     {
-        const response = await fetch(`http://localhost:3000/api/admin/services/${encodeURIComponent(currentSelectedServiceId)}`, 
+        const response = await fetch(`http://localhost:4000/api/admin/services/${encodeURIComponent(currentSelectedServiceId)}`, 
         { method: 'DELETE' });
 
         if (response.ok) Clear_Form_Fields();

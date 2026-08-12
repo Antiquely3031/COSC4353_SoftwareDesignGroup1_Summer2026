@@ -72,32 +72,37 @@ async function Precompile_ProViews()
     const fs = require('fs');
     const path = require('path');
 
-    // Read and convert sql from the two sql files into strings
     const viewsFilePath = path.join(__dirname, '../../Assignment_4_Group_1/QSAdminDB/QSAdminDBQuey.sql');
     const procsFilePath = path.join(__dirname, '../../Assignment_4_Group_1/QSAdminDB/QSAdminDBTransAct.sql');
 
-    const viewsSql = fs.readFileSync(viewsFilePath, 'utf8');
-    const procsSql = fs.readFileSync(procsFilePath, 'utf8');
+    let viewsSql = fs.readFileSync(viewsFilePath, 'utf8');
+    let procsSql = fs.readFileSync(procsFilePath, 'utf8');
 
-    // Process and execute Views (safe to split by semicolon)
-    const cleanViewsSql = viewsSql.replace(/USE\s+[^;]+;/gi, '').trim();
-    const viewStatements = cleanViewsSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    // Clean up comments and structural environment targets
+    viewsSql = viewsSql.replace(/--.*$/gm, '').replace(/USE\s+[^;]+;/gi, '').trim();
+    procsSql = procsSql.replace(/--.*$/gm, '').replace(/USE\s+[^;]+;/gi, '').replace(/DELIMITER\s+\S+/gi, '').trim();
+
+    // Execute Views
+    const viewStatements = viewsSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
     for (const statement of viewStatements) {
       await pool.query(statement);
     }
 
-    // Process Stored Procedures
-    const cleanProcsSql = procsSql.replace(/USE\s+[^;]+;/gi, '').trim();
-    
-    // Split by custom delimiter logic or break clean blocks by catching drops vs full CREATE blocks
-    // Using a regex splitter that separates standard single-line statements from block chunks
-    const procStatements = cleanProcsSql
+    // Split and execute procedures individually to avoid multiple statement constraint checks
+    const procStatements = procsSql
       .split(/(?=DROP PROCEDURE)|(?=CREATE PROCEDURE)/gi)
       .map(s => s.trim())
       .filter(s => s.length > 0);
 
     for (const statement of procStatements) {
-      await pool.query(statement);
+      // Clean trailing standard delimiters from procedure blocks
+      let cleanStatement = statement;
+      if (cleanStatement.endsWith('//')) {
+        cleanStatement = cleanStatement.slice(0, -2).trim();
+      }
+      if (cleanStatement.length > 0) {
+        await pool.query(cleanStatement);
+      }
     }
 
     console.log('Successfully precompiled database views and stored procedures.');
@@ -576,7 +581,7 @@ userApp.post('/api/users/queue/leave', (req, res) =>
   return res.status(404).json({ error: 'Queue entry not found within service.' });
 });
 
-async function startServer(adminPort = 3000, userPort = 3005) 
+async function startServer(adminPort = 4000, userPort = 4005) 
 {
   await Precompile_ProViews();
   Services_Container = await Container_Initializer();
@@ -594,7 +599,7 @@ async function startServer(adminPort = 3000, userPort = 3005)
 }
 
 /* istanbul ignore next */
-if (require.main === module) startServer(3000, 3005);
+if (require.main === module) startServer(4000, 4005);
 
 module.exports = { 
   app, server, userServer, io, userApp, 

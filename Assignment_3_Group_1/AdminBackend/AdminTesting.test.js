@@ -521,7 +521,7 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
     await new Promise(resolve => userServer.close(resolve));
 
     const alternativeInstance = await startServer();
-    expect(alternativeInstance.address().port).toBe(3000);
+    expect(alternativeInstance.address().port).toBe(4000);
     await new Promise(resolve => alternativeInstance.close(resolve));
   });
 });
