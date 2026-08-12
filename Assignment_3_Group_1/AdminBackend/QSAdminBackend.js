@@ -373,15 +373,22 @@ async function QE_Service_Shfit(selected_service)
     for (let i = 0; i < selected_service.Queue_Array.length; i++) 
     {
       const entry = selected_service.Queue_Array[i];
-      if (entry && entry.queue_entry_id) 
-      {
-        entry.position = i + 1;
-        await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
-          entry.queue_entry_id, 
-          entry.position, 
-          entry.line_status || 'waiting'
-        ]);
-      }
+      if (!(entry && entry.queue_entry_id)) break;
+
+      entry.position = i + 1;
+      await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+        entry.queue_entry_id, 
+        entry.position, 
+        entry.line_status || 'waiting'
+      ]);
+    }
+
+    for (let i = 1; i <= selected_service.Queue_Array.length; i++) 
+    {
+      const entry = selected_service.Queue_Array[i];
+      if (!entry) break;
+
+      entry.position = i;
     }
   } 
   catch (dbErr) 
@@ -392,20 +399,19 @@ async function QE_Service_Shfit(selected_service)
 
 async function QE_Remover(target_client, effect) 
 {
-  if (target_client && target_client.queue_entry_id)
+  if (!(target_client && target_client.queue_entry_id)) return;
+
+  try 
   {
-    try 
-    {
-      await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
-        target_client.queue_entry_id, 
-        target_client.position || 1, 
-        effect
-      ]);
-    } 
-    catch (dbErr) 
-    {
-      console.error('Failed to persist served client status to database:', dbErr.message);
-    }
+    await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+      target_client.queue_entry_id, 
+      target_client.position || 1, 
+      effect
+    ]);
+  } 
+  catch (dbErr) 
+  {
+    console.error('Failed to persist served client status to database:', dbErr.message);
   }
 }
 

@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.08% </span>
+                <span class="strong">97.51% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>308/314</span>
+                <span class='fraction'>314/322</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">88.27% </span>
+                <span class="strong">88.41% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>143/162</span>
+                <span class='fraction'>145/164</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.47% </span>
+                <span class="strong">98.49% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>258/262</span>
+                <span class='fraction'>262/266</span>
             </div>
         
             
@@ -672,7 +672,13 @@
 <a name='L607'></a><a href='#L607'>607</a>
 <a name='L608'></a><a href='#L608'>608</a>
 <a name='L609'></a><a href='#L609'>609</a>
-<a name='L610'></a><a href='#L610'>610</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L610'></a><a href='#L610'>610</a>
+<a name='L611'></a><a href='#L611'>611</a>
+<a name='L612'></a><a href='#L612'>612</a>
+<a name='L613'></a><a href='#L613'>613</a>
+<a name='L614'></a><a href='#L614'>614</a>
+<a name='L615'></a><a href='#L615'>615</a>
+<a name='L616'></a><a href='#L616'>616</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1057,29 +1063,35 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32x</span>
+<span class="cline-any cline-yes">32x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1656,15 +1668,22 @@ async function QE_Service_Shfit(selected_service)
     for (let i = 0; i &lt; selected_service.Queue_Array.length; i++) 
     {
       const entry = selected_service.Queue_Array[i];
-      <span class="missing-if-branch" title="else path not taken" >E</span>if (entry &amp;&amp; entry.queue_entry_id) 
-      {
-        entry.position = i + 1;
-        await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
-          entry.queue_entry_id, 
-          entry.position, 
-          entry.line_status || <span class="branch-1 cbranch-no" title="branch not covered" >'waiting'</span>
-        ]);
-      }
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (!(entry &amp;&amp; entry.queue_entry_id)) <span class="cstat-no" title="statement not covered" >break;</span>
+&nbsp;
+      entry.position = i + 1;
+      await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+        entry.queue_entry_id, 
+        entry.position, 
+        entry.line_status || <span class="branch-1 cbranch-no" title="branch not covered" >'waiting'</span>
+      ]);
+    }
+&nbsp;
+    for (let i = 1; i &lt;= selected_service.Queue_Array.length; i++) 
+    {
+      const entry = selected_service.Queue_Array[i];
+      if (!entry) break;
+&nbsp;
+      entry.position = i;
     }
   } 
   catch (dbErr) 
@@ -1675,20 +1694,19 @@ async function QE_Service_Shfit(selected_service)
 &nbsp;
 async function QE_Remover(target_client, effect) 
 {
-  <span class="missing-if-branch" title="else path not taken" >E</span>if (target_client &amp;&amp; target_client.queue_entry_id)
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (!(target_client &amp;&amp; target_client.queue_entry_id)) <span class="cstat-no" title="statement not covered" >return;</span>
+&nbsp;
+  try 
   {
-    try 
-    {
-      await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
-        target_client.queue_entry_id, 
-        target_client.position || <span class="branch-1 cbranch-no" title="branch not covered" >1, </span>
-        effect
-      ]);
-    } 
-    catch (dbErr) 
-    {
-      console.error('Failed to persist served client status to database:', dbErr.message);
-    }
+    await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+      target_client.queue_entry_id, 
+      target_client.position || <span class="branch-1 cbranch-no" title="branch not covered" >1, </span>
+      effect
+    ]);
+  } 
+  catch (dbErr) 
+  {
+    console.error('Failed to persist served client status to database:', dbErr.message);
   }
 }
 &nbsp;
@@ -1897,7 +1915,7 @@ module.exports = {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-08-12T08:31:29.929Z
+                at 2026-08-12T23:23:49.631Z
             </div>
         <script src="prettify.js"></script>
         <script>
