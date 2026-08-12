@@ -383,12 +383,12 @@ async function QE_Service_Shfit(selected_service)
       ]);
     }
 
-    for (let i = 1; i <= selected_service.Queue_Array.length; i++) 
+    for (let i = 0; i < selected_service.Queue_Array.length; i++) 
     {
       const entry = selected_service.Queue_Array[i];
       if (!entry) break;
 
-      entry.position = i;
+      entry.position = i + 1;
     }
   } 
   catch (dbErr) 
