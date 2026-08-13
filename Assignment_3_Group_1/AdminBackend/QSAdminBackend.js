@@ -84,9 +84,7 @@ async function Precompile_ProViews()
 
     // Execute Views
     const viewStatements = viewsSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
-    for (const statement of viewStatements) {
-      await pool.query(statement);
-    }
+    for (const statement of viewStatements) await pool.query(statement);
 
     // Split and execute procedures individually to avoid multiple statement constraint checks
     const procStatements = procsSql
@@ -94,19 +92,17 @@ async function Precompile_ProViews()
       .map(s => s.trim())
       .filter(s => s.length > 0);
 
-    for (const statement of procStatements) {
+    for (const statement of procStatements) 
+    {
       // Clean trailing standard delimiters from procedure blocks
       let cleanStatement = statement;
-      if (cleanStatement.endsWith('//')) {
-        cleanStatement = cleanStatement.slice(0, -2).trim();
-      }
-      if (cleanStatement.length > 0) {
-        await pool.query(cleanStatement);
-      }
+      if (cleanStatement.endsWith('//')) cleanStatement = cleanStatement.slice(0, -2).trim();
+      if (cleanStatement.length > 0) await pool.query(cleanStatement);
     }
 
     console.log('Successfully precompiled database views and stored procedures.');
-  } catch (DBMS_error) {
+  } catch (DBMS_error) 
+  {
     console.error('Failed to precompile database views and procedures:', DBMS_error.message);
   }
 }
