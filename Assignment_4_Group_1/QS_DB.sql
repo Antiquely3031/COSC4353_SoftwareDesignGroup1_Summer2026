@@ -55,6 +55,7 @@ CREATE TABLE QueueEntry (
     position INT NOT NULL,
     join_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status ENUM('waiting', 'served', 'canceled') NOT NULL DEFAULT 'waiting',
+    served_time TIMESTAMP NULL DEFAULT NULL, -- Add by me, Elvis NTC
 
     CONSTRAINT fk_queueentry_queue
         FOREIGN KEY (queue_id)

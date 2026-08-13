@@ -270,6 +270,12 @@ BEGIN
     END;
 
     START TRANSACTION;
+        IF targeted_status = 'served' THEN
+            UPDATE QueueEntry
+            SET served_time = CURRENT_TIMESTAMP
+            WHERE queue_entry_id = targeted_queue_entry_id;
+        END IF;
+
         UPDATE QueueEntry
         SET position = targeted_position, status = COALESCE(targeted_status, 'waiting')
         WHERE queue_entry_id = targeted_queue_entry_id;
