@@ -734,6 +734,36 @@ userApp.post('/api/users/queue/leave', (req, res) =>
   return res.status(404).json({ error: 'Queue entry not found within service.' });
 });
 
+// // 1. Send Join Request
+// async function sendJoinRequest(serviceId, clientData) {
+//   const response = await fetch('http://localhost:4005/api/users/queue/join', {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify({
+//       service_id: serviceId,
+//       client_entry: clientData // { queue_entry_id, user_id, user_name, position, line_status, join_time }
+//     })
+//   });
+  
+//   const result = await response.json(); // Gets { message: "Joined successfully." }
+//   return result;
+// }
+
+// // 2. Send Leave Request
+// async function sendLeaveRequest(serviceId, queueEntryId) {
+//   const response = await fetch('http://localhost:4005/api/users/queue/leave', {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify({
+//       service_id: serviceId,
+//       queue_entry_id: queueEntryId
+//     })
+//   });
+
+//   const result = await response.json(); // Gets { message: "Left queue successfully." }
+//   return result;
+// }
+
 async function startServer(adminPort = 4000, userPort = 4005) 
 {
   await Precompile_ProViews();
