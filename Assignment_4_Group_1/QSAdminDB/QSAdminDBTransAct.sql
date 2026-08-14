@@ -74,7 +74,7 @@ BEGIN
 
         INSERT INTO Service (service_name, description, expected_duration, priority_level)
         VALUES (
-            CONCAT('Placeholder ', i),
+            CONCAT('Service ', i),
             CONCAT('According to all known laws of aviation, there is no way that a bee should be able to fly. ', i),
             i,
             p_level
