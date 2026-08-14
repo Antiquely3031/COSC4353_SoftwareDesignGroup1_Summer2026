@@ -3,7 +3,12 @@
 const baseAPI = "http://localhost:3000/api";
 //rewriting this userID variable to be more algined with the new remote database, moving away from the local database
 
-const userID = Number(sessionStorage.getItem("userId"));
+const currentUser = JSON.parse(sessionStorage.getItem("qs_user") || "null");
+
+const userID = Number(currentUser.id);
+const userName = currentUser.name;
+const userEmail = currentUser.email;
+const userRole = currentUser.role;
 
 if (!userID) {
     alert("Please log in before using QueueSmart.");
@@ -164,12 +169,13 @@ async function setupDashboardPage() {
 }
 //queue status page
 async function setupQueueStatusPage() {
-    const currentQueue = getCurrentQueue();
+    
     const serviceName = document.getElementById("statusService");
     const queuePosition = document.getElementById("statusPosition");
     const waitTime = document.getElementById("statusWaitTime");
     const queueStatus = document.getElementById("statusCurrent");
     const statusMessage = document.getElementById("statusMessage");
+    const queueStatusCard = document.getElementById("queueStatusCard");
     const leaveButton = document.getElementById("statusLeaveButton");
 
     //new implementation of queue status page this time will be connected to backend
@@ -201,8 +207,8 @@ async function setupQueueStatusPage() {
         }
     }
 
-    if (statusLeaveButton) {
-        statusLeaveButton.addEventListener("click", async () => {
+    if (leaveButton) {
+        leaveButton.addEventListener("click", async () => {
             try {
                 const response = await fetch(`${baseAPI}/queue/leave`, {
                     method: "POST",
@@ -215,6 +221,7 @@ async function setupQueueStatusPage() {
                 });
 
                 const data = await response.json();
+                
                 if (!response.ok) {
                     if (statusMessage) {
                         statusMessage.textContent = data.error || "Unable to leave queue.";
@@ -550,4 +557,8 @@ async function loadSmartWaitTime(selectedServiceId) {
         console.error("Error loading smart suggestion:", error);
         smartSuggestion.textContent = "Smart suggestion unavailable.";
     }
+}
+function logout() {
+    sessionStorage.removeItem("qs_user");
+    window.location.href = "../QSLoginBackend/QSLoginScreen.html";
 }
