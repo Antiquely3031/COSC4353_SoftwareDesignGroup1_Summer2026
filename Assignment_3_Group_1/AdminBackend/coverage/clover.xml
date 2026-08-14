@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1786676948056" clover="3.2.0">
-  <project timestamp="1786676948056" name="All files">
+<coverage generated="1786677985166" clover="3.2.0">
+  <project timestamp="1786677985166" name="All files">
     <metrics statements="315" coveredstatements="314" conditionals="172" coveredconditionals="167" methods="55" coveredmethods="54" elements="542" coveredelements="535" complexity="0" loc="315" ncloc="315" packages="1" files="1" classes="1"/>
     <file name="QSAdminBackend.js" path="C:\Users\CHair\Documents\Program Elvis\Github\COSC4353_SoftwareDesignGroup1_Summer2026\Assignment_3_Group_1\AdminBackend\QSAdminBackend.js">
       <metrics statements="315" coveredstatements="314" conditionals="172" coveredconditionals="167" methods="55" coveredmethods="54"/>

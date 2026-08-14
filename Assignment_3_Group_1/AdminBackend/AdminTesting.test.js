@@ -65,7 +65,7 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
       {
         const mockRows = Array.from({ length: 30 }, (_, i) => ({
           service_id: i + 1,
-          name: `Placeholder ${i + 1}`,
+          name: `Service ${i + 1}`,
           description: `Description ${i + 1}`,
           expected_duration: i + 1,
           priority: i % 3 === 2 ? 'High' : (i % 3 === 1 ? 'Medium' : 'Low'),
@@ -395,7 +395,7 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
       res = await request(server).post('/api/admin/services').send({ name: 'High Prio P', description: 'D', expected_duration: 5, priority: 'high' });
       expect(res.status).toBe(201);
 
-      res = await request(server).post('/api/admin/services').send({ name: 'Placeholder 2', description: 'D', expected_duration: 10 });
+      res = await request(server).post('/api/admin/services').send({ name: 'Service 2', description: 'D', expected_duration: 10 });
       expect(res.status).toBe(409);
 
       res = await request(server).post('/api/admin/services').send({ name: 'TriggerError', description: 'D', expected_duration: 10 });
