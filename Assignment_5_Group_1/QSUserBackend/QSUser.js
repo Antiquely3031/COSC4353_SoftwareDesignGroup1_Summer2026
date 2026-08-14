@@ -5,19 +5,25 @@ const baseAPI = "http://localhost:3000/api";
 
 const currentUser = JSON.parse(sessionStorage.getItem("qs_user") || "null");
 
-const userID = Number(currentUser.id);
+if (!currentUser) {
+    alert("Please log in before using QueueSmart.");
+    window.location.href = "../QSLoginBackend/QSLoginScreen.html";
+}
+
+const userID = Number(currentUser.id || currentUser.user_id || currentUser.userId);
 const userName = currentUser.name;
 const userEmail = currentUser.email;
 const userRole = currentUser.role;
 
 if (!userID) {
-    alert("Please log in before using QueueSmart.");
-    window.location.href = "QSLoginScreen.html";
+    alert("Invalid login session. Please log in again.");
+    sessionStorage.removeItem("qs_user");
+    window.location.href = "../QSLoginBackend/QSLoginScreen.html";
 }
 
 //Loading pages with conditions
 document.addEventListener("DOMContentLoaded", () => {
-    if (document.getElementById("joinQueuePage")) {
+    if (document.getElementById("joinQueuePage") || document.getElementById("joinQueueForm")) {
         setupJoinQueuePage();
     }
     if (document.getElementById("dashboardPage")) {
@@ -169,7 +175,7 @@ async function setupDashboardPage() {
 }
 //queue status page
 async function setupQueueStatusPage() {
-    
+
     const serviceName = document.getElementById("statusService");
     const queuePosition = document.getElementById("statusPosition");
     const waitTime = document.getElementById("statusWaitTime");
@@ -221,7 +227,7 @@ async function setupQueueStatusPage() {
                 });
 
                 const data = await response.json();
-                
+
                 if (!response.ok) {
                     if (statusMessage) {
                         statusMessage.textContent = data.error || "Unable to leave queue.";
