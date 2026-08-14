@@ -34,6 +34,12 @@ module.exports = {
   deleteUserByEmail: async (email) => {
     await pool.execute('DELETE FROM user_credentials WHERE email = ?', [email]);
   },
+  updateLoginTracking: async (user_Id, ip) => {
+    await pool.execute(
+      `UPDATE UserCredentials SET last_login_ip = ?, last_login_time = NOW() WHERE user_id = ?`,
+      [ip, user_Id]
+    );
+  },
   closePool: async () => {
     await pool.end();
   }
