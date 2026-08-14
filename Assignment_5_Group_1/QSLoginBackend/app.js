@@ -79,10 +79,25 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({error: "Invalid email or password."});
   }
 
+  if(user.locked_until && new Date() < new Date(user.locked_until)) {
+    const remainingMs = new Date(user.locked_until) - new Date();
+    const remainingMinutes = Math.ceil(remainingMs / 60000);
+    return res.status(429).json({error: `Too many failed attempts. Try again in ${remainingMinutes} minutes(s).`});
+  }
+
   const passwordMatches = await bcrypt.compare(password, user.password_hash);
   if(!passwordMatches) {
+    await db.incrementFailedAttempts(user.user_id);
+    const newAttemptCount = user.failed_attempts + 1;
+    const lockoutMinutes = calculateLockoutMinutes(newAttemptCount);
+    if(lockoutMinutes > 0) {
+      const lockedUntil = new Date(Date.now() + lockoutMinutes * 60000);
+      await db.setLockout(user.user_id, lockedUntil);
+    }
     return res.status(401).json({error: 'Invalid email or password'});
   }
+
+  await db.resetFailedAttempts(user.user_id);
 
   const currentIp = req.ip;
   const anomalous = isAnomalousLogin(user, currentIp);
