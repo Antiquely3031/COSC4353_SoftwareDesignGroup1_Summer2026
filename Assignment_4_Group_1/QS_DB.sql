@@ -55,6 +55,7 @@ CREATE TABLE QueueEntry (
     position INT NOT NULL,
     join_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status ENUM('waiting', 'served', 'canceled') NOT NULL DEFAULT 'waiting',
+    served_time TIMESTAMP NULL DEFAULT NULL, -- Add by me, Elvis NTC
 
     CONSTRAINT fk_queueentry_queue
         FOREIGN KEY (queue_id)
@@ -70,9 +71,15 @@ CREATE TABLE QueueEntry (
         CHECK (position > 0)
 );
 
+-- Richard added type, title, and service_name so the notification module can
+-- use the fields it has used in A3. Notification module will throw unknown column 'type'
+-- on every insert without this change.
 CREATE TABLE NotificationHistory (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
+    type ENUM('queue', 'status', 'info') NOT NULL DEFAULT 'info',
+    title VARCHAR(50) NOT NULL DEFAULT 'Info',
+    service_name VARCHAR(100) NULL,
     message VARCHAR(255) NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status ENUM('sent', 'viewed') NOT NULL DEFAULT 'sent',
@@ -80,5 +87,7 @@ CREATE TABLE NotificationHistory (
     CONSTRAINT fk_notification_user
         FOREIGN KEY (user_id)
         REFERENCES UserCredentials(user_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_notif_user_time (user_id, timestamp)
 );

@@ -1,11 +1,7 @@
 USE QueueSmartDB;
 
--- Drop existing view if present
 DROP VIEW IF EXISTS vw_AdminServiceQueueState;
 
--- View: vw_AdminServiceQueueState
--- Purpose: Consolidates service profiles with their active queue entries mapping rich objects
--- to align explicitly with the Queue_Entry system schema.
 CREATE VIEW vw_AdminServiceQueueState AS
 SELECT 
     s.service_id,
@@ -20,29 +16,43 @@ SELECT
     END AS priority,
     COALESCE(q.status, 'closed') AS operation_status,
     COALESCE(
-        JSON_ARRAYAGG(
-            IF(qe.queue_entry_id IS NOT NULL, 
+        (
+            SELECT JSON_ARRAYAGG(
                 JSON_OBJECT(
-                    'queue_entry_id', qe.queue_entry_id,
-                    'user_id', qe.user_id,
-                    'user_name', CONCAT('Person ', qe.position),
-                    'position', qe.position,
-                    'line_status', qe.status,
-                    'join_time', qe.join_time
-                ), 
-                NULL)
-        ), 
+                    'queue_entry_id', t.queue_entry_id,
+                    'user_id', t.user_id,
+                    'user_name', t.user_name,
+                    'position', t.position,
+                    'line_status', t.line_status,
+                    'join_time', t.join_time
+                )
+            )
+            FROM (
+                -- Join and order elements together inside the derived block to guarantee alignment
+                SELECT 
+                    qe.queue_id,
+                    qe.queue_entry_id,
+                    qe.user_id,
+                    u.name AS user_name,
+                    qe.position,
+                    qe.status AS line_status,
+                    qe.join_time
+                FROM QueueEntry qe
+                JOIN UserCredentials u ON qe.user_id = u.user_id
+                WHERE qe.status = 'waiting'
+                ORDER BY qe.position ASC
+                LIMIT 18446744073709551615
+            ) t
+            -- Strictly correlate the ordered rows to the active outer service queue
+            WHERE t.queue_id = q.queue_id
+        ),
         JSON_ARRAY()
     ) AS Queue_Array,
-    COUNT(qe.queue_entry_id) AS queue_length
+    (
+        SELECT COUNT(*) 
+        FROM QueueEntry qe 
+        WHERE qe.queue_id = q.queue_id AND qe.status = 'waiting'
+    ) AS queue_length
 FROM Service s
 JOIN Queue q ON s.service_id = q.service_id
-LEFT JOIN QueueEntry qe ON q.queue_id = qe.queue_id AND qe.status = 'waiting'
-GROUP BY 
-    s.service_id, 
-    s.service_name, 
-    s.description, 
-    s.expected_duration, 
-    s.priority_level, 
-    q.status
 ORDER BY priority DESC, s.service_id ASC;

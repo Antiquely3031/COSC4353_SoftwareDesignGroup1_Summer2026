@@ -13,8 +13,10 @@ dotenv.config({ path: path.resolve(__dirname, 'QSAdminDBEnv.env') });
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
+  port: Number(process.env.DB_PORT) || 3306,
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'QueueSmartDB',
+  database: process.env.DB_NAME || 'queuesmartdb',
+  multipleStatements: true,
   waitForConnections: true,
   connectionLimit: 100,
   queueLimit: 0

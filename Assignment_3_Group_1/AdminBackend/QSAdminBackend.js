@@ -65,6 +65,48 @@ function normalizeStatus(status)
   return 'open';
 }
 
+async function Precompile_ProViews() 
+{
+  try 
+  {
+    const fs = require('fs');
+    const path = require('path');
+
+    const viewsFilePath = path.join(__dirname, '../../Assignment_4_Group_1/QSAdminDB/QSAdminDBQuey.sql');
+    const procsFilePath = path.join(__dirname, '../../Assignment_4_Group_1/QSAdminDB/QSAdminDBTransAct.sql');
+
+    let viewsSql = fs.readFileSync(viewsFilePath, 'utf8');
+    let procsSql = fs.readFileSync(procsFilePath, 'utf8');
+
+    // Clean up comments and structural environment targets
+    viewsSql = viewsSql.replace(/--.*$/gm, '').replace(/USE\s+[^;]+;/gi, '').trim();
+    procsSql = procsSql.replace(/--.*$/gm, '').replace(/USE\s+[^;]+;/gi, '').replace(/DELIMITER\s+\S+/gi, '').trim();
+
+    // Execute Views
+    const viewStatements = viewsSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    for (const statement of viewStatements) await pool.query(statement);
+
+    // Split and execute procedures individually to avoid multiple statement constraint checks
+    const procStatements = procsSql
+      .split(/(?=DROP PROCEDURE)|(?=CREATE PROCEDURE)/gi)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    for (const statement of procStatements) 
+    {
+      // Clean trailing standard delimiters from procedure blocks
+      let cleanStatement = statement;
+      if (cleanStatement.endsWith('//')) cleanStatement = cleanStatement.slice(0, -2).trim();
+      if (cleanStatement.length > 0) await pool.query(cleanStatement);
+    }
+
+    console.log('Successfully precompiled database views and stored procedures.');
+  } catch (DBMS_error) 
+  {
+    console.error('Failed to precompile database views and procedures:', DBMS_error.message);
+  }
+}
+
 async function Container_Initializer() 
 {
   try 
@@ -90,14 +132,14 @@ async function Container_Initializer()
       parsedQueue = parsedQueue.filter(item => item !== null);
 
       return new Service_Entry(
-          row.service_id,
-          row.name,
-          row.description,
-          Number(row.expected_duration),
-          Number(row.priority) || 2,
-          Number(row.queue_length),
-          normalizeStatus(row.operation_status || 'open'),
-          parsedQueue
+        row.service_id,
+        row.name,
+        row.description,
+        Number(row.expected_duration),
+        Number(row.priority) || 2,
+        Number(row.queue_length),
+        normalizeStatus(row.operation_status || 'open'),
+        parsedQueue
       );
     });
 
@@ -131,15 +173,15 @@ function validateServicePayload(payload)
   
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') 
   {
-      const lowerPrio = String(priority).toLowerCase().trim();
-      switch (lowerPrio) 
-      {
-          case 'low': case '1': numericPriority = 1; dbEnumPriority = 'Low'; break;
-          case 'medium': case '2': numericPriority = 2; dbEnumPriority = 'Medium'; break;
-          case 'high': case '3': numericPriority = 3; dbEnumPriority = 'High'; break;
-          /* istanbul ignore next */
-          default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
-      }
+    const lowerPrio = String(priority).toLowerCase().trim();
+    switch (lowerPrio) 
+    {
+      case 'low': case '1': numericPriority = 1; dbEnumPriority = 'Low'; break;
+      case 'medium': case '2': numericPriority = 2; dbEnumPriority = 'Medium'; break;
+      case 'high': case '3': numericPriority = 3; dbEnumPriority = 'High'; break;
+      /* istanbul ignore next */
+      default: return { valid: false, error: 'Priority Level must be low, medium, or high.' };
+    }
   }
 
   return {
@@ -178,27 +220,27 @@ function broadcastQueueUpdate()
 
 app.patch('/api/admin/services/status', async (req, res) => 
 {
-    const { service_id, status } = req.body;
+  const { service_id, status } = req.body;
 
-    if (!(service_id && status)) return res.status(400).json({ error: 'Missing service_id or status in request body.' });
+  if (!(service_id && status)) return res.status(400).json({ error: 'Missing service_id or status in request body.' });
 
-    try 
+  try 
+  {
+    const updatedService = await Status_Changer(service_id, status);
+
+    if (updatedService) 
     {
-      const updatedService = await Status_Changer(service_id, status);
+      broadcastQueueUpdate();
 
-      if (updatedService) 
-      {
-        broadcastQueueUpdate();
+      return res.status(200).json({
+        message: 'Status updated successfully',
+        service: updatedService
+      });
+    }
 
-        return res.status(200).json({
-          message: 'Status updated successfully',
-          service: updatedService
-        });
-      }
-
-      return res.status(404).json({ error: 'Service not found.' });
-    } 
-    catch (error) {  return res.status(500).json({ error: error.message });  }
+    return res.status(404).json({ error: 'Service not found.' });
+  } 
+  catch (error) {  return res.status(500).json({ error: error.message });  }
 });
 
 app.post('/api/admin/services', async (req, res) => 
@@ -319,6 +361,56 @@ function notifyServed(servedClient, serviceName) {
 // -------------------------------------------------------------
 // CONNECTION HUB 1: ADMIN WEB-SOCKET PORT (Privileged Scope)
 // -------------------------------------------------------------
+
+async function QE_Service_Shfit(selected_service) 
+{
+  try 
+  {
+    for (let i = 0; i < selected_service.Queue_Array.length; i++) 
+    {
+      const entry = selected_service.Queue_Array[i];
+      if (!(entry && entry.queue_entry_id)) break;
+
+      entry.position = i + 1;
+      await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+        entry.queue_entry_id, 
+        entry.position, 
+        entry.line_status || 'waiting'
+      ]);
+    }
+
+    for (let i = 0; i < selected_service.Queue_Array.length; i++) 
+    {
+      const entry = selected_service.Queue_Array[i];
+      if (!entry) break;
+
+      entry.position = i + 1;
+    }
+  } 
+  catch (dbErr) 
+  {
+    console.error('Failed to shift remaining queue entry positions after removal:', dbErr.message);
+  }
+}
+
+async function QE_Remover(target_client, effect) 
+{
+  if (!(target_client && target_client.queue_entry_id)) return;
+
+  try 
+  {
+    await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
+      target_client.queue_entry_id, 
+      target_client.position || 1, 
+      effect
+    ]);
+  } 
+  catch (dbErr) 
+  {
+    console.error('Failed to persist served client status to database:', dbErr.message);
+  }
+}
+
 io.on('connection', (socket) => 
 {
   console.log('Admin connected to Queue WS:', socket.id);
@@ -330,7 +422,7 @@ io.on('connection', (socket) =>
       console.log(`Admin disconnected from Queue WS (${socket.id}). Reason: ${reason}`);
   });
 
-  socket.on('serve_client', (data) => 
+  socket.on('serve_client', async (data) => 
   {
     const { service_id, queue_entry_id } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
@@ -349,16 +441,23 @@ io.on('connection', (socket) =>
       if (targetIndex !== -1)
       {
         servedClient = service.Queue_Array.splice(targetIndex, 1)[0];
+
+        // Update all the positions to ensure the correct ordering.
+        QE_Service_Shfit(service);
+
         service.queue_length = service.Queue_Array.length;
         broadcastQueueUpdate();
 
         const notifyPayload = (servedClient && servedClient.user_id) ? servedClient.user_id : servedClient;
         notifyServed(notifyPayload, service.name);
+
+        // Persist serving state changes in database safely preserving historical context
+        QE_Remover(servedClient, 'served');
       }
     }
   });
 
-  socket.on('remove_client', (data) => 
+  socket.on('remove_client', async (data) => 
   {
     const { service_id, queue_entry_id } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
@@ -375,14 +474,21 @@ io.on('connection', (socket) =>
 
       if (targetIndex !== -1)
       {
-        service.Queue_Array.splice(targetIndex, 1);
+        const removedClient = service.Queue_Array.splice(targetIndex, 1)[0];
+
+        // Update all the positions to ensure the correct ordering.
+        QE_Service_Shfit(service);
+
         service.queue_length = service.Queue_Array.length;
         broadcastQueueUpdate();
+
+        // Persist removal in database safely preserving historical context
+        QE_Remover(removedClient, 'canceled');
       }
     }
   });
 
-  socket.on('reorder_queue', (data) => 
+  socket.on('reorder_queue', async (data) => 
   {
     const { service_id, updated_queue } = data || {};
     const service = Services_Container.find(s => String(s.service_id) === String(service_id));
@@ -391,6 +497,25 @@ io.on('connection', (socket) =>
     {
       service.Queue_Array = updated_queue;
       service.queue_length = service.Queue_Array.length;
+
+      // Update positions for each entry sequentially in DB
+      try 
+      {
+        for (let i = 0; i < service.Queue_Array.length; i++) 
+        {
+          const entry = service.Queue_Array[i];
+          if (entry && entry.queue_entry_id) 
+          {
+            entry.position = i + 1;
+            await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [entry.queue_entry_id, entry.position, 'waiting']);
+          }
+        }
+      } 
+      catch (dbErr) 
+      {
+        console.error('Failed to persist queue reordering to database:', dbErr.message);
+      }
+
       broadcastQueueUpdate();
     }
   });
@@ -458,8 +583,9 @@ userApp.post('/api/users/queue/leave', (req, res) =>
   return res.status(404).json({ error: 'Queue entry not found within service.' });
 });
 
-async function startServer(adminPort = 3000, userPort = 3005) 
+async function startServer(adminPort = 4000, userPort = 4005) 
 {
+  await Precompile_ProViews();
   Services_Container = await Container_Initializer();
   
   // Start the User listener channel
@@ -475,12 +601,12 @@ async function startServer(adminPort = 3000, userPort = 3005)
 }
 
 /* istanbul ignore next */
-if (require.main === module) startServer(3000, 3005);
+if (require.main === module) startServer(4000, 4005);
 
 module.exports = { 
   app, server, userServer, io, userApp, 
   startServer, 
   Service_Entry, Queue_Entry, 
-  Container_Initializer, 
+  Container_Initializer, Precompile_ProViews, 
   Status_Changer 
 };

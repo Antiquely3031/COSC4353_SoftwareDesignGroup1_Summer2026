@@ -5,7 +5,7 @@ let globalServicesContainer = [];
 // Initialize Socket connection
 if (typeof io !== 'undefined') 
 {
-    socket = io('http://localhost:3000');
+    socket = io('http://localhost:4000');
 
     socket.on('connect', () => {
         console.log("Connected to Backend WS with ID:", socket.id);
@@ -35,7 +35,7 @@ if (typeof io !== 'undefined')
     });
 } else 
 {
-    console.error("Socket.io library (io) is not loaded! Include <script src='http://localhost:3000/socket.io/socket.io.js'></script> in your HTML.");
+    console.error("Socket.io library (io) is not loaded! Include <script src='http://localhost:4000/socket.io/socket.io.js'></script> in your HTML.");
 }
 
 // Startup event binding

@@ -53,10 +53,13 @@ async function setupJoinQueuePage() {
     joinQueueForm.addEventListener("submit", async (event) => {
         event.preventDefault();
 
+        const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+
         if (!serviceSelect.value) {
             joinQueueMessage.textContent = "Please select a service before joining a queue.";
             return;
         }
+
 
         try {
             const response = await fetch(`${baseAPI}/queue/join`, {
@@ -72,14 +75,22 @@ async function setupJoinQueuePage() {
 
             const data = await response.json();
 
+
             if (!response.ok) {
                 joinQueueMessage.textContent = data.error || "Failed to join queue.";
                 return;
             }
 
-            if (window.QSNotify && typeof QSNotify.queueJoined === "function") {
-                QSNotify.queueJoined(data.serviceName);
-            }
+            const queueData = {
+                serviceId: data.serviceId,
+                serviceName: data.serviceName,
+                estimatedWait: data.estimatedWait,
+                position: data.position,
+                status: data.status,
+                joinedAt: new Date().toLocaleString()
+            };
+
+            localStorage.setItem("currentQueue", JSON.stringify(queueData));
 
             joinQueueMessage.textContent =
                 `You joined the ${data.serviceName} queue. ` +
@@ -92,15 +103,18 @@ async function setupJoinQueuePage() {
     });
     //leave queue button functionality
     if (leaveQueueButton) {
+    if (leaveQueueButton) {
         //assuming user leaves instigate queue departure 
         leaveQueueButton.addEventListener("click", async () => {
             try {
                 const data = await leaveQueueFromDatabase();
+                localStorage.removeItem("currentQueue");
+
                 if (window.QSNotify && typeof QSNotify.left === "function") {
                     QSNotify.left(data.serviceName);
                 }
-                //old call that is for local storage transition to backend
-                //addHistoryRecord(data.serviceName, "Canceled");
+
+                addHistoryRecord(data.serviceName, "Canceled");
                 joinQueueMessage.textContent = `Left the ${data.serviceName} queue.`;
 
                 selectedService.textContent = "None selected";
@@ -134,6 +148,7 @@ async function setupDashboardPage() {
 }
 //queue status page
 async function setupQueueStatusPage() {
+async function setupQueueStatusPage() {
     const currentQueue = getCurrentQueue();
     const serviceName = document.getElementById("statusService");
     const queuePosition = document.getElementById("statusPosition");
@@ -148,7 +163,7 @@ async function setupQueueStatusPage() {
         const data = await response.json();
 
         if (!response.ok) {
-            if (statusMessage) {
+            if(statusMessage) {
                 statusMessage.innerHTML = data.error || "Unable to load queue status";
             }
             if (queueStatusCard) {
@@ -163,7 +178,7 @@ async function setupQueueStatusPage() {
         if (waitTime) waitTime.textContent = `${data.estimatedWait} minutes`;
         if (queueStatus) queueStatus.textContent = data.status;
 
-    }
+    } 
     catch (error) {
         console.error("Error loading queue status:", error);
         if (statusMessage) {
@@ -195,7 +210,16 @@ async function setupQueueStatusPage() {
                 if (statusMessage) {
                     statusMessage.textContent = `You have left the ${data.serviceName} queue.`;
                 }
+                if (statusMessage) {
+                    statusMessage.textContent = `You have left the ${data.serviceName} queue.`;
+                }
 
+                if (queueStatusCard) {
+                    queueStatusCard.style.display = "none";
+                }
+                if (window.QSNotify && typeof QSNotify.left === "function") {
+                    QSNotify.left(data.serviceName);
+                }
                 if (queueStatusCard) {
                     queueStatusCard.style.display = "none";
                 }
@@ -211,8 +235,17 @@ async function setupQueueStatusPage() {
             }
         });
     }
+            } catch (error) {
+                console.error("Error leaving queue:", error);
+                if (statusMessage) {
+                    statusMessage.textContent = "Unable to connect to backend.";
+                }
+            }
+        });
+    }
 }
 //queue history page
+async function setupHistoryPage() {
 async function setupHistoryPage() {
     const historyListBody = document.getElementById("historyListBody");
 
@@ -234,9 +267,26 @@ async function setupHistoryPage() {
         if (!response.ok) {
             throw new Error(history.error || "Failed to load history.");
         }
+    try {
+        const response = await fetch(`${baseAPI}/queue/history/${userID}`);
+        const history = await response.json();
+
+        if (!response.ok) {
+            throw new Error(history.error || "Failed to load history.");
+        }
 
         historyListBody.innerHTML = "";
+        historyListBody.innerHTML = "";
 
+        if (history.length === 0) {
+            historyListBody.innerHTML = `
+                <div class="history-row">
+                    <span>No queue history available.</span>
+                    <span>--</span>
+                    <span>--</span>
+                    <span>--</span>
+                </div>
+            `;
         if (history.length === 0) {
             historyListBody.innerHTML = `
                 <div class="history-row">
@@ -251,14 +301,33 @@ async function setupHistoryPage() {
             if (summaryServed) summaryServed.textContent = 0;
             if (summaryCanceled) summaryCanceled.textContent = 0;
             if (summaryNoShow) summaryNoShow.textContent = 0;
+            if (summaryTotal) summaryTotal.textContent = 0;
+            if (summaryServed) summaryServed.textContent = 0;
+            if (summaryCanceled) summaryCanceled.textContent = 0;
+            if (summaryNoShow) summaryNoShow.textContent = 0;
 
+            return;
+        }
             return;
         }
 
         let servedCount = 0;
         let canceledCount = 0;
         let noShowCount = 0;
+        let servedCount = 0;
+        let canceledCount = 0;
+        let noShowCount = 0;
 
+        history.forEach(record => {
+            const status = record.status || "unknown";
+            const statusLower = status.toLowerCase();
+
+            let statusClass = "waiting";
+
+            if (statusLower === "served" || statusLower === "completed") {
+                servedCount++;
+                statusClass = "completed";
+            }
         history.forEach(record => {
             const status = record.status || "unknown";
             const statusLower = status.toLowerCase();
@@ -274,7 +343,19 @@ async function setupHistoryPage() {
                 canceledCount++;
                 statusClass = "canceled";
             }
+            if (statusLower === "canceled" || statusLower === "cancelled") {
+                canceledCount++;
+                statusClass = "canceled";
+            }
 
+            if (statusLower === "no show") {
+                noShowCount++;
+                statusClass = "no-show";
+            }
+
+            const joinedDate = record.join_time ? new Date(record.join_time) : null;
+            const date = joinedDate ? joinedDate.toLocaleDateString() : "--";
+            const time = joinedDate ? joinedDate.toLocaleTimeString() : "--";
             if (statusLower === "no show") {
                 noShowCount++;
                 statusClass = "no-show";
@@ -286,6 +367,8 @@ async function setupHistoryPage() {
 
             const row = document.createElement("div");
             row.classList.add("history-row");
+            const row = document.createElement("div");
+            row.classList.add("history-row");
 
             row.innerHTML = `
                 <span>${record.service_name}</span>
@@ -295,7 +378,17 @@ async function setupHistoryPage() {
                     ${status}
                 </span>
             `;
+            row.innerHTML = `
+                <span>${record.service_name}</span>
+                <span>${date}</span>
+                <span>${time}</span>
+                <span class="outcome ${statusClass}">
+                    ${status}
+                </span>
+            `;
 
+            historyListBody.appendChild(row);
+        });
             historyListBody.appendChild(row);
         });
 
@@ -317,17 +410,8 @@ async function setupHistoryPage() {
         `;
     }
 }
-//Helper functions
-// function getCurrentQueue() {
-//     const queueData = localStorage.getItem("currentQueue");
-
-//     if (!queueData) {
-//         return null;
-//     }
-//     return JSON.parse(queueData);
-// }
-// function addHistoryRecord(serviceName, status) {
-//     const history = getHistory();
+function addHistoryRecord(serviceName, status) {
+    const history = getHistory();
 
 //     const now = new Date();
 //     //default value
@@ -391,6 +475,7 @@ async function loadServicesDropdown() {
         }
 
         const services = await response.json();
+
 
         serviceSelect.innerHTML = `<option value="">Select a service</option>`;
         services.forEach(service => {

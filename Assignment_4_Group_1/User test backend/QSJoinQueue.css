@@ -1,0 +1,68 @@
+:root {
+    --ink: #1E4CD2;
+    --card: #172B3E;
+    --field: #172B3E;
+    --text: #F2F9F8;
+    --muted: #8b8b96;
+    --error: #e8836b;
+    --background: #07090f;
+    --border: rgba(242, 249, 248, 0.15);
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    color: var(--text);
+    font-weight: bold;
+}
+
+.form-group select {
+    background-color: var(--field);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.queue-preview {
+    background-color: var(--field);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 20px;
+}
+
+.queue-preview h3 {
+    margin-top: 0;
+}
+
+.queue-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.queue-actions button {
+    border: none;
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.join-button {
+    background-color: var(--text);
+    color: #000;
+}
+
+.leave-button {
+    background-color: var(--error);
+    color: var(--text);
+}

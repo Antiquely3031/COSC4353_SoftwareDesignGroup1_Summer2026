@@ -1,6 +1,8 @@
 USE QueueSmartDB;
 
 -- Clear prior procedures for clean migration
+DROP PROCEDURE IF EXISTS MIG_UserCredentials;
+DROP PROCEDURE IF EXISTS MIG_UserProfile;
 DROP PROCEDURE IF EXISTS MIG_Service;
 DROP PROCEDURE IF EXISTS MIG_Queue;
 DROP PROCEDURE IF EXISTS MIG_Queue_Entries;
@@ -9,8 +11,52 @@ DROP PROCEDURE IF EXISTS Service_Status_UPDATE;
 DROP PROCEDURE IF EXISTS INSERT_Service;
 DROP PROCEDURE IF EXISTS UPDATE_Service;
 DROP PROCEDURE IF EXISTS DELETE_Service;
+DROP PROCEDURE IF EXISTS UPDATE_Queue_Entry;
 
--- Mock Data Generation
+-- Procedure: Populate User Credentials with mixed and matched names
+CREATE PROCEDURE MIG_UserCredentials(IN User_Amount INT)
+BEGIN
+    DECLARE i INT DEFAULT 1;
+    DECLARE first_names TEXT;
+    DECLARE last_names TEXT;
+    DECLARE current_first VARCHAR(50);
+    DECLARE current_last VARCHAR(50);
+    DECLARE combined_name VARCHAR(100);
+    DECLARE first_index INT;
+    DECLARE last_index INT;
+    
+    -- Seed blocks of raw components
+    SET first_names = 'John,Jane,Alex,Emily,Michael,Sarah,David,Jessica,Chris,Ashley,Elvis,Patrick,Kevin,Richard,Maria';
+    SET last_names = 'Smith,Johnson,Williams,Brown,Jones,Miller,Davis,Garcia,Rodriguez,Wilson,Martinez,Anderson,Taylor,Thomas,Hernandez';
+    
+    WHILE i <= User_Amount DO
+        -- Use modulo operators to cycle deterministic cross-product selections from the 15-item arrays
+        SET first_index = (i % 15) + 1;
+        SET last_index = ((i * 3) % 15) + 1;
+        
+        SET current_first = SUBSTRING_INDEX(SUBSTRING_INDEX(first_names, ',', first_index), ',', -1);
+        SET current_last = SUBSTRING_INDEX(SUBSTRING_INDEX(last_names, ',', last_index), ',', -1);
+        SET combined_name = CONCAT(current_first, ' ', current_last);
+        
+        INSERT INTO UserCredentials (name, email, password_hash, role)
+        VALUES (
+            combined_name,
+            CONCAT(LOWER(current_first), '.', LOWER(current_last), i, '@queuesmart.local'),
+            CONCAT('hash_fallback_value_', i),
+            'User'
+        );
+        SET i = i + 1;
+    END WHILE;
+END;
+
+-- Procedure: Populate User Profiles
+CREATE PROCEDURE MIG_UserProfile()
+BEGIN
+    INSERT INTO UserProfile (user_id, preferences)
+    SELECT user_id, '{"theme": "dark", "notifications": {"email": true, "sms": false}}'
+    FROM UserCredentials;
+END;
+
 -- Procedure: Populate Services
 CREATE PROCEDURE MIG_Service(IN Demo_Amount INT)
 BEGIN
@@ -46,22 +92,17 @@ BEGIN
     LIMIT Demo_Amount;
 END;
 
--- Procedure: Populate Entries per Active Queue
-CREATE PROCEDURE MIG_Queue_Entries(IN Entries_Per_Queue INT)
+-- Procedure: Populate Entries per Active Queue mapped to random users with dynamic lengths
+CREATE PROCEDURE MIG_Queue_Entries(IN Max_Entries_Per_Queue INT)
 BEGIN
     DECLARE done INT DEFAULT FALSE;
     DECLARE current_queue_id INT;
     DECLARE pos INT;
-    DECLARE demo_user_id INT;
+    DECLARE target_entries INT;
+    DECLARE random_user_id INT;
 
     DECLARE queue_cursor CURSOR FOR SELECT queue_id FROM Queue;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-
-    IF NOT EXISTS (SELECT 1 FROM UserCredentials WHERE user_id = 1) THEN
-        INSERT INTO UserCredentials (user_id, name, email, password_hash, role)
-        VALUES (1, 'System Seed User', 'seed@queuesmart.local', 'hash_placeholder', 'User');
-    END IF;
-    SELECT user_id INTO demo_user_id FROM UserCredentials LIMIT 1;
 
     OPEN queue_cursor;
 
@@ -71,10 +112,20 @@ BEGIN
             LEAVE read_loop;
         END IF;
 
+        -- Generate a random queue depth between 2 and Max_Entries_Per_Queue
+        SET target_entries = FLOOR(2 + (RAND() * (Max_Entries_Per_Queue - 2)));
         SET pos = 1;
-        WHILE pos <= Entries_Per_Queue DO
+
+        WHILE pos <= target_entries DO
+            -- Pull a random user from the user pool
+            SELECT user_id INTO random_user_id 
+            FROM UserCredentials 
+            ORDER BY RAND() 
+            LIMIT 1;
+
             INSERT INTO QueueEntry (queue_id, user_id, position, status)
-            VALUES (current_queue_id, demo_user_id, pos, 'waiting');
+            VALUES (current_queue_id, random_user_id, pos, 'waiting');
+
             SET pos = pos + 1;
         END WHILE;
     END LOOP;
@@ -82,7 +133,7 @@ BEGIN
     CLOSE queue_cursor;
 END;
 
--- Orchestration Procedure
+-- Comprehensive Composite Master Procedure
 CREATE PROCEDURE Mock_Initialization_Generation(IN Demo_Amount INT)
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -95,10 +146,18 @@ BEGIN
         DELETE FROM QueueEntry;
         DELETE FROM Queue;
         DELETE FROM Service;
+        DELETE FROM UserProfile;
+        -- Disable constraints temporarily to safely purge base accounts
+        SET FOREIGN_KEY_CHECKS = 0;
+        DELETE FROM UserCredentials;
+        SET FOREIGN_KEY_CHECKS = 1;
 
+        -- Generate dynamic structural dependencies in order
+        CALL MIG_UserCredentials(Demo_Amount * 5);
+        CALL MIG_UserProfile();
         CALL MIG_Service(Demo_Amount);
         CALL MIG_Queue(Demo_Amount);
-        CALL MIG_Queue_Entries(60);
+        CALL MIG_Queue_Entries(Demo_Amount * 2);
     COMMIT;
 END;
 
@@ -194,14 +253,14 @@ BEGIN
     START TRANSACTION;
         DELETE FROM Service WHERE service_id = targeted_service_id;
     COMMIT;
-END
+END;
 
 -- Admin Queue Management Transactions
 CREATE PROCEDURE UPDATE_Queue_Entry
 (
     IN targeted_queue_entry_id INT,
     IN targeted_position INT,
-    IN targeted_status INT
+    IN targeted_status ENUM('waiting', 'served', 'canceled')
 )
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -211,8 +270,14 @@ BEGIN
     END;
 
     START TRANSACTION;
-        UPDATE Queue_Entry
-        SET position = targeted_position, status = targeted_status
+        IF targeted_status = 'served' THEN
+            UPDATE QueueEntry
+            SET served_time = CURRENT_TIMESTAMP
+            WHERE queue_entry_id = targeted_queue_entry_id;
+        END IF;
+
+        UPDATE QueueEntry
+        SET position = targeted_position, status = COALESCE(targeted_status, 'waiting')
         WHERE queue_entry_id = targeted_queue_entry_id;
     COMMIT;
 END
