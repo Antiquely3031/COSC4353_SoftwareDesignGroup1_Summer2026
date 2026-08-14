@@ -1,0 +1,21 @@
+{
+  "name": "queuesmart_notifications",
+  "version": "1.0.0",
+  "description": "Notification backend module for QueueSmart (Richard) - Assignment 4, MySQL persistence",
+  "main": "QSNotificationServer.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node QSNotificationServer.js",
+    "test": "jest --coverage --runInBand"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mysql2": "^3.23.2"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
+  }
+}
