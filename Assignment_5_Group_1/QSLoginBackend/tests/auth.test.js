@@ -305,6 +305,32 @@ describe('POST /api/reset-password', () => {
   });
 });
 
+describe('calculateLockoutMinutes logic', () => {
+  const {calculateLockoutMinutes} = require('../app');
+
+  test('returns 0 for fewer than 5 failed attempts', () => {
+    expect(calculateLockoutMinutes(0)).toBe(0);
+    expect(calculateLockoutMinutes(3)).toBe(0);
+    expect(calculateLockoutMinutes(4)).toBe(0);
+  });
+
+  test('returns 1 minute on 5th failed attempt', () => {
+    expect(calculateLockoutMinutes(5)).toBe(1);
+  });
+
+  test('returns 2 minutes on 6th failed attempt', () => {
+    expect(calculateLockoutMinutes(6)).toBe(2);
+  });
+  
+  test('returns 4 minutes on 7th failed attempt', () => {
+    expect(calculateLockoutMinutes(7)).toBe(4);
+  });
+  
+  test('escalates exponentially for many failed attempts', () => {
+    expect(calculateLockoutMinutes(10)).toBe(32);
+  });
+});
+
 describe('isAnomalousLogin logic', () => {
   const {isAnomalousLogin} = require('../app');
 
