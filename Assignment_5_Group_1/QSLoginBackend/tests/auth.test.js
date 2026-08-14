@@ -305,3 +305,27 @@ describe('POST /api/reset-password', () => {
   });
 });
 
+describe('isAnomalousLogin logic', () => {
+  const {isAnomalousLogin} = require('../app');
+
+  test('do not flag first-ever login', () => {
+    const user = {last_login_ip: null, last_login_time:null};
+    expect(isAnomalousLogin(user, '1.2.3.4')).toBe(false);
+  });
+
+  test('flags an IP change within 30 minutes of last login', () => {
+    const user = {last_login_ip: '1.2.3.4', last_login_time: new Date(Date.now() - 5 * 60000)};
+    expect(isAnomalousLogin(user, '5.6.7.8')).toBe(true);
+  });
+
+  test('do not flag the same IP, even when recent', () => {
+    const user = {last_login_ip: '1.2.3.4', last_login_time: new Date(Date.now() - 5 * 60000)};
+    expect(isAnomalousLogin(user, '1.2.3.4')).toBe(false);
+  });
+
+  test('do not flag IP change after more than 30 minutes', () => {
+    const user = {last_login_ip: '1.2.3.4', last_login_time: new Date(Date.now() - 60 * 60000)};
+    expect(isAnomalousLogin(user, '5.6.7.8')).toBe(false);
+  });
+});
+
