@@ -32,85 +32,85 @@ app.get("/api/services", async (req, res) => {
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 //this is from patrick and is used to ensure that the signup button functions
-app.post("/api/signup", async (req, res) => {
-    try {
-        const { name, email, password } = req.body;
+// app.post("/api/signup", async (req, res) => {
+//     try {
+//         const { name, email, password } = req.body;
 
-        if (!name || !email || !password) {
-            return res.status(400).json({
-                error: "Name, email, and password are required."
-            });
-        }
+//         if (!name || !email || !password) {
+//             return res.status(400).json({
+//                 error: "Name, email, and password are required."
+//             });
+//         }
 
-        if (password.length < 8 || password.length > 20) {
-            return res.status(400).json({
-                error: "Password must be between 8 and 20 characters."
-            });
-        }
+//         if (password.length < 8 || password.length > 20) {
+//             return res.status(400).json({
+//                 error: "Password must be between 8 and 20 characters."
+//             });
+//         }
 
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({
-                error: "Please provide a valid email address."
-            });
-        }
+//         if (!emailRegex.test(email)) {
+//             return res.status(400).json({
+//                 error: "Please provide a valid email address."
+//             });
+//         }
 
-        const [existingUsers] = await db.query(
-            "SELECT user_id FROM UserCredentials WHERE email = ?",
-            [email]
-        );
+//         const [existingUsers] = await db.query(
+//             "SELECT user_id FROM UserCredentials WHERE email = ?",
+//             [email]
+//         );
 
-        if (existingUsers.length > 0) {
-            return res.status(409).json({
-                error: "An account already exists with that email."
-            });
-        }
+//         if (existingUsers.length > 0) {
+//             return res.status(409).json({
+//                 error: "An account already exists with that email."
+//             });
+//         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+//         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const [result] = await db.query(
-            `INSERT INTO UserCredentials (name, email, password_hash, role)
-             VALUES (?, ?, ?, ?)`,
-            [name, email, hashedPassword, "User"]
-        );
+//         const [result] = await db.query(
+//             `INSERT INTO UserCredentials (name, email, password_hash, role)
+//              VALUES (?, ?, ?, ?)`,
+//             [name, email, hashedPassword, "User"]
+//         );
 
-        res.status(201).json({
-            id: result.insertId,
-            name,
-            email,
-            role: "User"
-        });
+//         res.status(201).json({
+//             id: result.insertId,
+//             name,
+//             email,
+//             role: "User"
+//         });
 
-    } catch (error) {
-        console.error("Error signing up:", error);
+//     } catch (error) {
+//         console.error("Error signing up:", error);
 
-        res.status(500).json({
-            error: "Failed to create account."
-        });
-    }
-});
-app.post('/api/signup', async (req, res) => {
-    const { name, email, password } = req.body;
+//         res.status(500).json({
+//             error: "Failed to create account."
+//         });
+//     }
+// });
+// app.post('/api/signup', async (req, res) => {
+//     const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
-        return res.status(400).json({ error: 'Name, email, and password are required.' });
-    }
-    if (password.length < 8 || password.length > 20) {
-        return res.status(400).json({ error: 'Password must be between 8 and 20 characters.' });
-    }
-    if (!emailRegex.test(email)) {
-        return res.status(400).json({ error: 'Please provide a valid email address.' });
-    }
-    if (await db.findUserByEmail(email)) {
-        return res.status(409).json({ error: 'An account already exists with that email.' });
-    }
+//     if (!name || !email || !password) {
+//         return res.status(400).json({ error: 'Name, email, and password are required.' });
+//     }
+//     if (password.length < 8 || password.length > 20) {
+//         return res.status(400).json({ error: 'Password must be between 8 and 20 characters.' });
+//     }
+//     if (!emailRegex.test(email)) {
+//         return res.status(400).json({ error: 'Please provide a valid email address.' });
+//     }
+//     if (await db.findUserByEmail(email)) {
+//         return res.status(409).json({ error: 'An account already exists with that email.' });
+//     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await db.createUser({ name, email, password: hashedPassword, role: 'user' });
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const newUser = await db.createUser({ name, email, password: hashedPassword, role: 'user' });
 
-    res.status(201).json({
-        id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role
-    });
-});
+//     res.status(201).json({
+//         id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role
+//     });
+// });
 // implementing POST execution for a /api/queue/join endpoint
 app.post("/api/queue/join", async (req, res) => {
     try {
