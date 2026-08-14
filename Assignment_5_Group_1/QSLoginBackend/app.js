@@ -181,7 +181,7 @@ app.post('/api/forgot-password', async (req, res) => {
     const expires = new Date(Date.now() + 3600000);
     await db.setResetToken(user.user_id, token, expires);
 
-    const resetLink = `http://127.0.0.1:5500/Assignment_4_Group_1/QSLoginBackend/reset-password.html?token=${token}`;
+    const resetLink = `http://127.0.0.1:5500/Assignment_5_Group_1/QSLoginBackend/reset-password.html?token=${token}`;
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -221,3 +221,4 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
+module.exports.isAnomalousLogin = isAnomalousLogin;
