@@ -8,7 +8,11 @@ CREATE TABLE UserCredentials (
 	email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('User', 'Administrator') NOT NULL DEFAULT 'User',
-    creationDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    creationDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reset_token VARCHAR(255),
+    reset_token_expires TIMESTAMP NULL,
+    last_login_ip VARCHAR(45),
+    last_login_time TIMESTAMP NULL
 );
 
 CREATE TABLE UserProfile (
@@ -73,6 +77,9 @@ CREATE TABLE QueueEntry (
 CREATE TABLE NotificationHistory (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
+    type ENUM('queue', 'status', 'info') NOT NULL DEFAULT 'info',
+    title VARCHAR(50) NOT NULL DEFAULT 'Info',
+    service_name VARCHAR(100) NULL,
     message VARCHAR(255) NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status ENUM('sent', 'viewed') NOT NULL DEFAULT 'sent',
@@ -80,5 +87,7 @@ CREATE TABLE NotificationHistory (
     CONSTRAINT fk_notification_user
         FOREIGN KEY (user_id)
         REFERENCES UserCredentials(user_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_notif_user_time (user_id, timestamp)
 );
