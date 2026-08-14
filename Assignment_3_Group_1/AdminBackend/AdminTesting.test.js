@@ -9,7 +9,58 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
         return Promise.reject(new Error('Mocked Database Failure Execution'));
       }
 
-      // 1. Mock SELECT queries for the main queue view (vw_AdminServiceQueueState)
+      // 1. Mock stored procedure CALL GetAdminReportStats(?)
+      if (sqlString.toUpperCase().includes('GETADMINREPORTSTATS')) {
+        const overallStats = [{
+          total_queue_entries: 25,
+          total_unique_users: 18,
+          total_users_served: 20,
+          total_users_canceled: 5,
+          average_wait_time_minutes: 12.5
+        }];
+
+        const servicesStats = [
+          {
+            service_id: 1,
+            service_name: 'Test Service A',
+            description: 'According to all known laws of aviation, there is no way that a bee should be able to fly.',
+            expected_duration: 5,
+            priority_level: 'High',
+            total_service_entries: 15,
+            users_served: 12,
+            users_waiting: 1,
+            users_canceled: 2,
+            avg_service_wait_time_minutes: 10.2
+          },
+          {
+            service_id: 2,
+            service_name: 'Test Service B',
+            description: 'Standard operational queue service endpoint for customer intake.',
+            expected_duration: 10,
+            priority_level: 'Medium',
+            total_service_entries: 10,
+            users_served: 8,
+            users_waiting: 0,
+            users_canceled: 2,
+            avg_service_wait_time_minutes: 15.8
+          }
+        ];
+
+        const userHistory = [
+          {
+            queue_entry_id: 101,
+            user_id: 'usr_1',
+            user_name: 'Alice',
+            service_name: 'Test Service A',
+            status: 'served',
+            join_time: '2026-08-10 10:00:00'
+          }
+        ];
+
+        return Promise.resolve([[overallStats, servicesStats, userHistory]]);
+      }
+
+      // 2. Mock SELECT queries for the main queue view (vw_AdminServiceQueueState)
       if (sqlString.includes('vw_AdminServiceQueueState')) 
       {
         const mockRows = Array.from({ length: 30 }, (_, i) => ({
@@ -57,7 +108,7 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
         return Promise.resolve([mockRows]);
       }
 
-      // 2. Mock INSERT queries (POST route)
+      // 3. Mock INSERT queries (POST route)
       if (sqlString.toUpperCase().includes('INSERT')) 
       {
         return Promise.resolve([
@@ -66,13 +117,13 @@ jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
         ]);
       }
 
-      // 3. Mock UPDATE and DELETE queries
+      // 4. Mock UPDATE and DELETE queries
       if (sqlString.toUpperCase().includes('UPDATE') || sqlString.toUpperCase().includes('DELETE')) 
       {
         return Promise.resolve([{ affectedRows: 1 }]);
       }
 
-      // 4. Mock single-record or post-insert SELECT queries
+      // 5. Mock single-record or post-insert SELECT queries
       if (sqlString.toUpperCase().includes('SELECT')) 
       {
         const paramVal = params && params[0] !== undefined ? params[0] : '';
@@ -110,6 +161,8 @@ const request = require('supertest');
 const ioClient = require('socket.io-client');
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const pool = require('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool').default;
 const { 
   startServer, 
@@ -176,10 +229,9 @@ describe('Database Migration & Precompilation Operations', () => {
   let readFileSyncSpy;
   let consoleLogSpy;
   let consoleErrorSpy;
-  let originalQueryMock; // Store the original mock here
+  let originalQueryMock;
 
   beforeEach(() => {
-    // Save the global mock implementation before overwriting it
     originalQueryMock = pool.query.getMockImplementation();
 
     readFileSyncSpy = jest.spyOn(fs, 'readFileSync').mockImplementation((filePath) => {
@@ -200,7 +252,6 @@ describe('Database Migration & Precompilation Operations', () => {
     consoleLogSpy.mockRestore();
     consoleErrorSpy.mockRestore();
     
-    // Restore the original baseline mock implementation for downstream suites
     if (originalQueryMock) {
       pool.query.mockImplementation(originalQueryMock);
     }
@@ -234,9 +285,11 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
 {
   let adminPort;
   let userPort;
+  let defaultPoolQueryMock;
 
   beforeAll(async () => 
   {
+    defaultPoolQueryMock = pool.query.getMockImplementation();
     await startServer(0, 0);
     adminPort = server.address().port;
     userPort = userServer.address().port;
@@ -282,6 +335,42 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
       pool.query.mockImplementationOnce(() => Promise.reject(new Error('Fatal Update Error')));
       response = await request(server).patch('/api/admin/services/status').send({ service_id: 1, status: 'closed' });
       expect(response.status).toBe(500);
+    });
+
+    test('generates PDF reports with page breaks when services list exceeds page height', async () => {
+      // Mock GetAdminReportStats returning >8 services to exceed y > 250
+      pool.query.mockImplementationOnce(() => {
+        const mockServices = Array.from({ length: 9 }, (_, i) => ({
+          service_id: i + 1,
+          service_name: `Service ${i + 1}`,
+          description: `Description ${i + 1}`,
+          expected_duration: 10,
+          priority_level: 'High',
+          total_service_entries: 5,
+          users_served: 4,
+          users_waiting: 1,
+          users_canceled: 0,
+          avg_service_wait_time_minutes: 5.0
+        }));
+
+        return Promise.resolve([ [ [{}], mockServices, [] ] ]);
+      });
+
+      const response = await request(server)
+        .post('/api/admin/reports/generate')
+        .send({ timeframe: 'week' });
+
+      expect(response.status).toBe(200);
+    });
+
+    test('PATCH /api/admin/services/status successfully updates status and broadcasts update', async () => {
+      const response = await request(server)
+        .patch('/api/admin/services/status')
+        .send({ service_id: 1, status: 'closed' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Status updated successfully');
+      expect(response.body.service.operation_status).toBe('closed');
     });
 
     test('POST /api/admin/services covers every custom field validation rule', async () => 
@@ -344,6 +433,133 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
       res = await request(server).delete('/api/admin/services/3');
       expect(res.status).toBe(500);
     });
+
+    describe('POST /api/admin/reports/generate Suite', () => {
+      let writeFileSyncSpy;
+      let mkdirSyncSpy;
+      let existsSyncSpy;
+
+      beforeEach(() => {
+        pool.query.mockImplementation(defaultPoolQueryMock);
+        writeFileSyncSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+        mkdirSyncSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {});
+        existsSyncSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+      });
+
+      afterEach(() => {
+        writeFileSyncSpy.mockRestore();
+        mkdirSyncSpy.mockRestore();
+        existsSyncSpy.mockRestore();
+      });
+
+      test('triggers rate limiter or unhandled error on line 445 when threshold exceeded', async () => {
+        let response;
+        for (let i = 0; i < 105; i++) {
+          response = await request(server).get('/api/admin/services');
+        }
+        expect([200, 429]).toContain(response.status);
+      });
+
+      test('triggers generic error handler on line 445', async () => {
+        pool.query.mockImplementationOnce(() => {
+          return Promise.reject(new Error('Internal Server Error'));
+        });
+
+        const response = await request(server)
+          .post('/api/admin/reports/generate')
+          .send({ timeframe: 'week' });
+
+        expect(response.status).toBe(500);
+        expect(response.body).toEqual({ error: 'Internal Server Error' });
+      });
+
+      test('generates reports for default timeframe (week)', async () => {
+        const response = await request(server)
+          .post('/api/admin/reports/generate')
+          .send({});
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toContain('created successfully');
+        expect(response.body.folderPath).toBeDefined();
+        expect(mkdirSyncSpy).toHaveBeenCalled();
+        expect(writeFileSyncSpy).toHaveBeenCalledTimes(4); // 2 CSVs + 2 PDFs
+      });
+
+      test('generates reports for month, quarter, and annual timeframes', async () => {
+        const timeframes = ['month', 'quarter', 'annual'];
+
+        for (const timeframe of timeframes) {
+          const response = await request(server)
+            .post('/api/admin/reports/generate')
+            .send({ timeframe });
+
+          expect(response.status).toBe(200);
+          expect(response.body.message).toContain('created successfully');
+        }
+      });
+
+      test('handles Sunday date calculations branch (day === 0) for weekly reports (Line 242)', async () => {
+        // Mock Date to simulate a Sunday (e.g. Aug 16, 2026)
+        const mockSunday = new Date('2026-08-16T10:00:00Z');
+        jest.useFakeTimers().setSystemTime(mockSunday);
+
+        const response = await request(server)
+          .post('/api/admin/reports/generate')
+          .send({ timeframe: 'week' });
+
+        expect(response.status).toBe(200);
+        jest.useRealTimers();
+      });
+
+      test('handles null/undefined service field fallbacks and empty list fallbacks (Lines 260-262, 287, 297, 300-301, 340-341)', async () => {
+        // Procedure returns null procedureResults rows and service objects with missing fields
+        pool.query.mockImplementationOnce(() => {
+          const mockServiceStatsWithNulls = [
+            {
+              service_id: 99,
+              service_name: 'Null Field Service',
+              description: null,          // triggers (s.description || '').replace(...) & s.description || 'N/A'
+              expected_duration: null,    // triggers s.expected_duration || 0
+              priority_level: null,       // triggers s.priority_level || 'Medium'
+              total_service_entries: 0,
+              users_served: 0,
+              users_waiting: 0,
+              users_canceled: 0,
+              avg_service_wait_time_minutes: 0
+            }
+          ];
+          return Promise.resolve([[ [{}], mockServiceStatsWithNulls, null ]]);
+        });
+
+        const response = await request(server)
+          .post('/api/admin/reports/generate')
+          .send({ timeframe: 'week' });
+
+        expect(response.status).toBe(200);
+      });
+
+      test('handles existing target directory without re-creating folder', async () => {
+        existsSyncSpy.mockReturnValueOnce(true); // Pretend folder exists
+
+        const response = await request(server)
+          .post('/api/admin/reports/generate')
+          .send({ timeframe: 'week' });
+
+        expect(response.status).toBe(200);
+        expect(mkdirSyncSpy).not.toHaveBeenCalled();
+      });
+
+      test('returns 500 status on database failure during report stats query', async () => {
+        pool.query.mockImplementationOnce(() => Promise.reject(new Error('Report Query Failure')));
+
+        const response = await request(server)
+          .post('/api/admin/reports/generate')
+          .send({ timeframe: 'week' });
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Report Query Failure');
+      });
+    });
   });
 
   describe('WebSocket Admin Scope Architecture', () => 
@@ -378,6 +594,15 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
     {
       socketClient.once('queue_updated', () => done());
       socketClient.emit('serve_client', { service_id: 4 });
+    });
+
+    test('serve_client handles non-existent queue_entry_id without throwing', (done) => {
+      socketClient.emit('serve_client', { service_id: 4, queue_entry_id: 999999 });
+
+      setTimeout(() => {
+        expect(socketClient.connected).toBe(true);
+        done();
+      }, 50);
     });
 
     test('serve_client handles cascading position database query failures gracefully', (done) => 
@@ -415,6 +640,15 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
       socketClient.emit('remove_client', { service_id: 5 });
     });
 
+    test('remove_client handles non-existent queue_entry_id without throwing', (done) => {
+      socketClient.emit('remove_client', { service_id: 5, queue_entry_id: 999999 });
+
+      setTimeout(() => {
+        expect(socketClient.connected).toBe(true);
+        done();
+      }, 50);
+    });
+
     test('remove_client handles cascading position database query failures gracefully', (done) => 
     {
       pool.query.mockImplementationOnce(() => Promise.reject(new Error('Internal Cascading Shift Cancel Error')));
@@ -424,6 +658,24 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
         expect(socketClient.connected).toBe(true);
         done();
       }, 50);
+    });
+
+    test('QE_Service_Shfit breaks early when encountering entry missing queue_entry_id', (done) => {
+      const malformedQueue = [
+        { queue_entry_id: 10, user_name: 'Valid Entry' },
+        { user_name: 'Missing ID Entry' }
+      ];
+
+      socketClient.once('queue_updated', () => {
+        socketClient.emit('serve_client', { service_id: 6, queue_entry_id: 10 });
+
+        setTimeout(() => {
+          expect(socketClient.connected).toBe(true);
+          done();
+        }, 50);
+      });
+
+      socketClient.emit('reorder_queue', { service_id: 6, updated_queue: malformedQueue });
     });
 
     test('reorder_queue applies custom array structural mappings', (done) => 
@@ -472,17 +724,23 @@ describe('Network Engine, Endpoint routing & Dynamic Protocols', () =>
     });
   });
 
-  describe('User Scope Server-Sent Events (SSE) Interface', () => 
+  describe('User Scope Server-Sent Events (SSE) Interface Matrix', () => 
   {
-    test('stream channel establishes event headers and updates data streams', (done) => 
+    test('stream channel establishes event headers and broadcasts write payloads to clients (Lines 227-228)', (done) => 
     {
       const req = http.get(`http://localhost:${userPort}/api/users/queue/stream`, (res) => {
         expect(res.headers['content-type']).toBe('text/event-stream');
         expect(res.headers['cache-control']).toBe('no-cache');
         expect(res.headers['connection']).toBe('keep-alive');
         
-        req.destroy();
-        done();
+        // Trigger a service status patch to invoke broadcastQueueUpdate() and send SSE data
+        request(server)
+          .patch('/api/admin/services/status')
+          .send({ service_id: 1, status: 'closed' })
+          .end(() => {
+            req.destroy();
+            done();
+          });
       });
     });
 

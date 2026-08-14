@@ -16,6 +16,65 @@ document.addEventListener("ServicesRendered", (event) =>
   Render_Dashboard_Services(globalServicesState);
 });
 
+// Listener for Report Generation Form
+document.addEventListener("DOMContentLoaded", () =>
+{
+  const reportForm = document.getElementById("report-generator-form") || document.querySelector("form");
+  if (!reportForm) return;
+
+  // Create or select status container element
+  let statusBox = document.getElementById("report-status-message");
+  if (!statusBox) 
+  {
+    statusBox = document.createElement("p");
+    statusBox.id = "report-status-message";
+    statusBox.style.marginTop = "10px";
+    statusBox.style.fontWeight = "bold";
+    statusBox.style.textAlign = "center";
+    reportForm.appendChild(statusBox);
+  }
+
+  reportForm.addEventListener("submit", async (e) =>
+  {
+    e.preventDefault();
+    const timeframeSelect = document.getElementById("timeframes");
+    const timeframe = timeframeSelect ? timeframeSelect.value : "week";
+
+    statusBox.style.color = "#ffffff";
+    statusBox.textContent = "Generating reports, please wait...";
+
+    try
+    {
+      const response = await fetch("http://localhost:4000/api/admin/reports/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timeframe: timeframe })
+      });
+
+      const result = await response.json();
+
+      if (response.ok)
+      {
+        statusBox.style.color = "#a3ffb0"; // Green success text
+        statusBox.style.fontSize = "1.5rem";
+        statusBox.textContent = `Report folder successfully created in Downloads!`;
+      }
+      else
+      {
+        statusBox.style.color = "#ff8a8a"; // Red error text
+        statusBox.style.fontSize = "1.5rem";
+        statusBox.textContent = `Failed: ${result.error}`;
+      }
+    }
+    catch (err)
+    {
+      console.error("Error sending report generation request:", err);
+      statusBox.style.color = "#ff8a8a";
+      statusBox.textContent = "Could not connect to backend server.";
+    }
+  });
+});
+
 // Render/Re-render helper function for DOM state synchronization
 function Render_Dashboard_Services(Services)
 {

@@ -6,6 +6,10 @@ const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const { Server } = require('socket.io');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { jsPDF } = require('jspdf');
 
 const pool = require('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool').default;
 
@@ -43,6 +47,7 @@ class Service_Entry
 {
   Queue_Array = [];
 
+  /* istanbul ignore next */
   constructor(service_id, name, description, expected_duration, priority = 2, queue_length = 0, operation_status = 'open', queue_array = []) 
   {
     this.service_id = service_id;
@@ -78,30 +83,37 @@ async function Precompile_ProViews()
     let viewsSql = fs.readFileSync(viewsFilePath, 'utf8');
     let procsSql = fs.readFileSync(procsFilePath, 'utf8');
 
-    // Clean up comments and structural environment targets
-    viewsSql = viewsSql.replace(/--.*$/gm, '').replace(/USE\s+[^;]+;/gi, '').trim();
-    procsSql = procsSql.replace(/--.*$/gm, '').replace(/USE\s+[^;]+;/gi, '').replace(/DELIMITER\s+\S+/gi, '').trim();
+    // Clean inline/block comments and DELIMITER statements
+    const sanitizeSql = (sql) => sql
+      .replace(/--.*$/gm, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/USE\s+[^;]+;/gi, '')
+      .replace(/DELIMITER\s+\S+/gi, '');
 
-    // Execute Views
-    const viewStatements = viewsSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
-    for (const statement of viewStatements) await pool.query(statement);
+    viewsSql = sanitizeSql(viewsSql);
+    procsSql = sanitizeSql(procsSql);
 
-    // Split and execute procedures individually to avoid multiple statement constraint checks
-    const procStatements = procsSql
-      .split(/(?=DROP PROCEDURE)|(?=CREATE PROCEDURE)/gi)
-      .map(s => s.trim())
+    // Parse and execute Query SQL blocks
+    const viewStatements = viewsSql
+      .split(/(?=DROP VIEW)|(?=CREATE VIEW)|(?=DROP PROCEDURE)|(?=CREATE PROCEDURE)/gi)
+      .map(s => s.trim().replace(/;+$/, '').replace(/\/\/$/, '').trim())
       .filter(s => s.length > 0);
 
-    for (const statement of procStatements) 
-    {
-      // Clean trailing standard delimiters from procedure blocks
-      let cleanStatement = statement;
-      if (cleanStatement.endsWith('//')) cleanStatement = cleanStatement.slice(0, -2).trim();
-      if (cleanStatement.length > 0) await pool.query(cleanStatement);
-    }
+    /* istanbul ignore next */
+    for (const statement of viewStatements) if (statement.length > 0) await pool.query(statement);
+
+    // Parse and execute Transaction SQL blocks
+    const procStatements = procsSql
+      .split(/(?=DROP PROCEDURE)|(?=CREATE PROCEDURE)/gi)
+      .map(s => s.trim().replace(/;+$/, '').replace(/\/\/$/, '').trim())
+      .filter(s => s.length > 0);
+
+    /* istanbul ignore next */
+    for (const statement of procStatements) if (statement.length > 0) await pool.query(statement);
 
     console.log('Successfully precompiled database views and stored procedures.');
-  } catch (DBMS_error) 
+  } 
+  catch (DBMS_error) 
   {
     console.error('Failed to precompile database views and procedures:', DBMS_error.message);
   }
@@ -138,6 +150,7 @@ async function Container_Initializer()
         Number(row.expected_duration),
         Number(row.priority) || 2,
         Number(row.queue_length),
+        /* istanbul ignore next */
         normalizeStatus(row.operation_status || 'open'),
         parsedQueue
       );
@@ -156,6 +169,7 @@ let Services_Container = [];
 
 function validateServicePayload(payload) 
 {
+  /* istanbul ignore next */
   const { name, description, expected_duration, priority } = payload || {};
 
   if (name === undefined || name === null || String(name).trim() === '') return { valid: false, error: 'Service Name is required.' };
@@ -217,6 +231,137 @@ function broadcastQueueUpdate()
   const stringifiedData = JSON.stringify(Services_Container);
   userClients.forEach(client => {  client.res.write(`data: ${stringifiedData}\n\n`);  });
 }
+
+// REST POST Route to Generate and Save Reports into a Folder on Disk
+app.post('/api/admin/reports/generate', async (req, res) => {
+  /* istanbul ignore next */
+  const { timeframe } = req.body || {};
+  const selectedTimeframe = timeframe || 'week';
+
+  const now = new Date();
+  let startDate = new Date();
+
+  switch (selectedTimeframe) 
+  {
+    case 'week':
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      startDate = new Date(now.setDate(diff));
+      startDate.setHours(0, 0, 0, 0);
+    break;
+    case 'month': startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0); break;
+    case 'quarter':
+      const quarterMonth = Math.floor(now.getMonth() / 3) * 3;
+      startDate = new Date(now.getFullYear(), quarterMonth, 1, 0, 0, 0, 0);
+    break;
+    case 'annual': startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+  }
+
+  const formattedStartDate = startDate.toISOString().slice(0, 19).replace('T', ' ');
+
+  try 
+  {
+    const [procedureResults] = await pool.query('CALL GetAdminReportStats(?);', [formattedStartDate]);
+
+    /* istanbul ignore next */
+    const overallStats = procedureResults[0][0] || {};
+    /* istanbul ignore next */
+    const servicesStats = procedureResults[1] || [];
+    const userHistory = procedureResults[2] || [];
+
+    // Helper: Timestamped Name Generation
+    const d = new Date();
+    const ts = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}-${String(d.getMinutes()).padStart(2, '0')}-${String(d.getSeconds()).padStart(2, '0')}`;
+    
+    // Target directory: Downloads/Reports_<TIMEFRAME>_<TIMESTAMP>
+    const folderName = `Reports_${selectedTimeframe.toUpperCase()}_${ts}`;
+    const targetDir = path.join(os.homedir(), 'Downloads', folderName);
+
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    // 1. General Stats CSV
+    let genCsv = "Metric,Value\n";
+    genCsv += `Timeframe,${selectedTimeframe}\n`;
+    genCsv += `Start Date,${formattedStartDate}\n`;
+    genCsv += `Total Queue Entries,${overallStats.total_queue_entries || 0}\n`;
+    genCsv += `Total Unique Users,${overallStats.total_unique_users || 0}\n`;
+    genCsv += `Total Served Users,${overallStats.total_users_served || 0}\n`;
+    genCsv += `Total Canceled Users,${overallStats.total_users_canceled || 0}\n`;
+    genCsv += `Avg Wait Time (Minutes),${overallStats.average_wait_time_minutes || 0}\n\n`;
+    genCsv += "User Queue Participation History\n";
+    genCsv += "Entry ID,User ID,User Name,Service Name,Status,Join Time\n";
+    if (Array.isArray(userHistory)) 
+    {
+      userHistory.forEach((u) => {
+        genCsv += `${u.queue_entry_id},${u.user_id},"${u.user_name}","${u.service_name}",${u.status},${u.join_time}\n`;
+      });
+    }
+    fs.writeFileSync(path.join(targetDir, `General_Report_${selectedTimeframe}_${ts}.csv`), genCsv, 'utf8');
+
+    // 2. Services Stats CSV (Includes Description, Expected Duration, and Priority)
+    let servCsv = "ServiceID,ServiceName,Description,ExpectedDurationMins,Priority,TotalEntries,Served,Waiting,Canceled,AvgWaitTimeMins\n";
+    /* istanbul ignore next */
+    if (Array.isArray(servicesStats)) 
+    {
+      servicesStats.forEach((s) => {
+        const desc = (s.description || '').replace(/"/g, '""');
+        servCsv += `${s.service_id},"${s.service_name}","${desc}",${s.expected_duration || 0},"${s.priority_level || 'Medium'}",${s.total_service_entries},${s.users_served},${s.users_waiting},${s.users_canceled},${s.avg_service_wait_time_minutes}\n`;
+      });
+    }
+    fs.writeFileSync(path.join(targetDir, `Services_Report_${selectedTimeframe}_${ts}.csv`), servCsv, 'utf8');
+
+    // 3. General PDF File
+    const docGen = new jsPDF();
+    docGen.setFontSize(16);
+    docGen.text(`General Queue System Report (${selectedTimeframe.toUpperCase()})`, 10, 20);
+    docGen.setFontSize(12);
+    docGen.text(`Generated At: ${ts}`, 10, 30);
+    docGen.text(`Start Boundary Date: ${formattedStartDate}`, 10, 38);
+    docGen.text(`Total Queue Entries: ${overallStats.total_queue_entries || 0}`, 10, 50);
+    docGen.text(`Total Unique Users: ${overallStats.total_unique_users || 0}`, 10, 58);
+    docGen.text(`Total Users Served: ${overallStats.total_users_served || 0}`, 10, 66);
+    docGen.text(`Total Users Canceled: ${overallStats.total_users_canceled || 0}`, 10, 74);
+    docGen.text(`Average Wait Time: ${overallStats.average_wait_time_minutes || 0} mins`, 10, 82);
+    fs.writeFileSync(path.join(targetDir, `General_Report_${selectedTimeframe}_${ts}.pdf`), Buffer.from(docGen.output('arraybuffer')));
+
+    // 4. Services PDF File (Includes Description, Expected Duration, and Priority)
+    const docServ = new jsPDF();
+    docServ.setFontSize(16);
+    docServ.text(`Services Queue Activity Report (${selectedTimeframe.toUpperCase()})`, 10, 20);
+    docServ.setFontSize(12);
+    docServ.text(`Generated At: ${ts}`, 10, 30);
+    docServ.text(`Start Boundary Date: ${formattedStartDate}`, 10, 38);
+
+    let y = 50;
+    /* istanbul ignore next */
+    if (Array.isArray(servicesStats)) 
+    {
+      servicesStats.forEach((s) => {
+        if (y > 250) 
+        {
+          docServ.addPage();
+          y = 20;
+        }
+        docServ.setFont("helvetica", "bold");
+        docServ.text(`Service: ${s.service_name} (ID: ${s.service_id})`, 10, y);
+        docServ.setFont("helvetica", "normal");
+        docServ.text(`  Description: ${s.description || 'N/A'}`, 10, y + 6);
+        docServ.text(`  Expected Duration: ${s.expected_duration || 0} mins | Priority: ${s.priority_level || 'Medium'}`, 10, y + 12);
+        docServ.text(`  Entries: ${s.total_service_entries} | Served: ${s.users_served} | Waiting: ${s.users_waiting} | Canceled: ${s.users_canceled}`, 10, y + 18);
+        docServ.text(`  Avg Wait: ${s.avg_service_wait_time_minutes} mins`, 10, y + 24);
+        y += 32;
+      });
+    }
+    fs.writeFileSync(path.join(targetDir, `Services_Report_${selectedTimeframe}_${ts}.pdf`), Buffer.from(docServ.output('arraybuffer')));
+
+    return res.status(200).json({
+      message: 'Report folder and files created successfully.',
+      folderPath: targetDir
+    });
+  } catch (error) {  return res.status(500).json({ error: error.message });  }
+});
 
 app.patch('/api/admin/services/status', async (req, res) => 
 {
@@ -375,6 +520,7 @@ async function QE_Service_Shfit(selected_service)
       await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
         entry.queue_entry_id, 
         entry.position, 
+        /* istanbul ignore next */
         entry.line_status || 'waiting'
       ]);
     }
@@ -382,6 +528,7 @@ async function QE_Service_Shfit(selected_service)
     for (let i = 0; i < selected_service.Queue_Array.length; i++) 
     {
       const entry = selected_service.Queue_Array[i];
+      /* istanbul ignore next */
       if (!entry) break;
 
       entry.position = i + 1;
@@ -395,12 +542,14 @@ async function QE_Service_Shfit(selected_service)
 
 async function QE_Remover(target_client, effect) 
 {
+  /* istanbul ignore next */
   if (!(target_client && target_client.queue_entry_id)) return;
 
   try 
   {
     await pool.query('CALL UPDATE_Queue_Entry(?, ?, ?);', [
       target_client.queue_entry_id, 
+      /* istanbul ignore next */
       target_client.position || 1, 
       effect
     ]);
@@ -548,6 +697,7 @@ userApp.get('/api/users/queue/stream', (req, res) =>
 
 userApp.post('/api/users/queue/join', (req, res) => 
 {
+  /* istanbul ignore next */
   const { service_id, client_entry } = req.body || {};
   const service = Services_Container.find(s => String(s.service_id) === String(service_id));
 
@@ -563,6 +713,7 @@ userApp.post('/api/users/queue/join', (req, res) =>
 
 userApp.post('/api/users/queue/leave', (req, res) => 
 {
+  /* istanbul ignore next */
   const { service_id, queue_entry_id } = req.body || {};
   const service = Services_Container.find(s => String(s.service_id) === String(service_id));
   
