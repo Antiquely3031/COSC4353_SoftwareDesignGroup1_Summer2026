@@ -213,7 +213,6 @@ async function setupQueueStatusPage() {
             statusMessage.textContent = "Unable to load queue status from backend.";
         }
     }
-
     if (leaveButton) {
         leaveButton.addEventListener("click", async () => {
             try {
@@ -228,25 +227,21 @@ async function setupQueueStatusPage() {
                 });
 
                 const data = await response.json();
-
                 if (!response.ok) {
                     if (statusMessage) {
                         statusMessage.textContent = data.error || "Unable to leave queue.";
                     }
                     return;
                 }
-
                 if (statusMessage) {
                     statusMessage.textContent = `You have left the ${data.serviceName} queue.`;
                 }
-
                 if (queueStatusCard) {
                     queueStatusCard.style.display = "none";
                 }
                 if (window.QSNotify && typeof QSNotify.left === "function") {
                     QSNotify.left(data.serviceName);
                 }
-
             } catch (error) {
                 console.error("Error leaving queue:", error);
                 if (statusMessage) {
@@ -423,18 +418,30 @@ async function setupHistoryPage() {
 // }
 // this section is added to assist in integrating the
 async function loadServicesDropdown() {
+    console.log("loadServicesDropdown is running");
+    console.log("Fetching from:", `${baseAPI}/services`);
+
     const serviceSelect = document.getElementById("serviceSelect");
+
+    console.log("serviceSelect:", serviceSelect);
 
     if (!serviceSelect) {
         return;
     }
+
     try {
         const response = await fetch(`${baseAPI}/services`);
+        console.log("services response:", response.status);
+
         if (!response.ok) {
             throw new Error("Failed to load services from backend");
         }
-
+        //debugging purposes
         const services = await response.json();
+        console.log("services data:", services);
+        console.log("services response:", response.status);
+        console.log("services loaded:", services);
+        console.log("number of services:", services.length);
 
         serviceSelect.innerHTML = `<option value="">Select a service</option>`;
         services.forEach(service => {
