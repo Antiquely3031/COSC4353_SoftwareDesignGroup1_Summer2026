@@ -1,0 +1,262 @@
+/*
+ * QSNotify styles — QueueSmart popup notifications 
+ * Richard Tiamzon
+ * Carries the shared QueueSmart base theme 
+ */
+
+:root {
+    --ink: #1E4CD2;
+    --card: #172B3E;
+    --field: #172B3E;
+    --text: #F2F9F8;
+    --muted: #8b8b96;
+    --error: #e8836b;
+    --background: #07090f;
+    --border: rgba(242, 249, 248, 0.15);
+    --queue: #1E4CD2;
+    --status: #3aa17e;
+    --info: #8b8b96;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: 'EB Garamond', serif;
+    background-color: var(--background);
+    color: var(--text);
+}
+
+/* layout similar to QS-UserDashboard for consistency */
+
+.top-header {
+    background-color: var(--ink);
+    color: var(--text);
+    text-align: center;
+    padding: 24px;
+    position: relative;
+}
+
+.top-header h1 { margin: 0; font-size: 2rem; }
+.top-header p { margin: 8px 0 0; }
+
+.logo-area { position: absolute; top: 15px; left: 25px; text-align: left; }
+.logo-area img { width: 65px; height: auto; }
+
+.navbar {
+    background-color: var(--card);
+    padding: 14px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+}
+
+.navbar a {
+    color: var(--text);
+    text-decoration: none;
+    margin: 0 12px;
+    font-weight: bold;
+}
+
+.navbar a:hover { color: var(--muted); }
+.navbar a.is-current { color: var(--muted); }
+
+.dashboard-container {
+    width: 90%;
+    max-width: 1000px;
+    margin: 24px auto;
+}
+
+.card {
+    background-color: var(--card);
+    padding: 22px;
+    margin-bottom: 22px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+}
+
+.card h2 { margin-top: 0; }
+.card p { color: var(--muted); }
+
+/* colored circle with an icon */
+.qs-dot {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+.qs-queue  { background-color: var(--queue); }
+.qs-status { background-color: var(--status); }
+.qs-info   { background-color: var(--info); }
+
+/*  
+POP UPS TOASTS
+*/
+
+.qs-toast-wrap {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 340px;
+    max-width: calc(100vw - 40px);
+}
+
+.qs-toast {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--info);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+    /* start off screen: slide in when .is-visible is added */
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.qs-toast.is-visible { transform: translateX(0); opacity: 1; }
+.qs-toast.is-leaving { transform: translateX(120%); opacity: 0; }
+
+.qs-toast-queue  { border-left-color: var(--queue); }
+.qs-toast-status { border-left-color: var(--status); }
+.qs-toast-info   { border-left-color: var(--info); }
+
+.qs-toast-body { flex: 1; min-width: 0; }
+.qs-toast-title { font-weight: bold; color: var(--text); }
+.qs-toast-msg { color: var(--muted); margin: 3px 0; font-size: 0.95rem; }
+.qs-toast-hint { color: var(--text); font-size: 0.8rem; opacity: 0.75; }
+
+.qs-toast-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+}
+
+.qs-toast-close:hover { color: var(--text); }
+
+/* NOTIFICATION LIST */
+
+.qs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* each row is a clickable link to Queue Status */
+a.qs-item {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    background-color: var(--field);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+a.qs-item:hover {
+    border-color: var(--text);
+    transform: translateX(2px);
+}
+
+.qs-body { flex: 1; min-width: 0; }
+.qs-title { color: var(--text); font-weight: bold; }
+.qs-msg { color: var(--muted); margin: 3px 0; }
+.qs-time { color: var(--muted); font-size: 0.85rem; }
+
+.qs-go { color: var(--muted); font-size: 1.3rem; flex: 0 0 auto; }
+a.qs-item:hover .qs-go { color: var(--text); }
+
+.qs-empty {
+    list-style: none;
+    color: var(--muted);
+    padding: 8px 2px;
+}
+
+.qs-viewall {
+    float: right;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.qs-viewall:hover { color: var(--muted); }
+
+/* DEMO BUTTONS + QUEUE STATUS PAGE */
+
+.qs-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.qs-btn {
+    background-color: var(--field);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.qs-btn:hover { border-color: var(--text); }
+.qs-btn-primary { background-color: var(--ink); border-color: var(--ink); }
+
+.qs-statusline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.qs-position {
+    font-size: 3rem;
+    font-weight: bold;
+    color: var(--text);
+    line-height: 1;
+}
+
+.qs-pill {
+    display: inline-block;
+    background-color: var(--ink);
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.qs-pill.almost-ready { background-color: var(--status); }
+.qs-pill.served { background-color: var(--muted); }
+
+.qs-code {
+    background-color: var(--field);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    color: var(--text);
+    font-size: 0.9rem;
+}
