@@ -93,6 +93,7 @@ app.post('/api/login', async (req, res) => {
     if(lockoutMinutes > 0) {
       const lockedUntil = new Date(Date.now() + lockoutMinutes * 60000);
       await db.setLockout(user.user_id, lockedUntil);
+      return res.status(429).json({error: `Too many failed attempts. Your account is locked for ${lockoutMinutes} minute(s).`});
     }
     return res.status(401).json({error: 'Invalid email or password'});
   }
