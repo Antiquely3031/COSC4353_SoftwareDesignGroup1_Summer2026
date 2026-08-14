@@ -17,7 +17,7 @@ document.addEventListener("ServicesRendered", (event) =>
 });
 
 // Listener for Report Generation Form
-document.addEventListener("DOMContentLoaded", () =>
+document.addEventListener("ServicesRendered", () =>
 {
   const reportForm = document.getElementById("report-generator-form") || document.querySelector("form");
   if (!reportForm) return;

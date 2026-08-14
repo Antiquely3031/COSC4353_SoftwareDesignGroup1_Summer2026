@@ -1,3 +1,31 @@
+// --- ADMIN SESSION & ACCESS GUARD ---
+const currentUser = JSON.parse(sessionStorage.getItem('qs_user') || 'null');
+
+// // 1. Check if the user is logged in
+// // 2. Ensure their role matches 'Administrator' (case-insensitive check)
+// if (!currentUser || !currentUser.id || (currentUser.role && currentUser.role.toLowerCase() !== 'administrator')) 
+// {
+//     alert("Access Restricted: You must be logged in as an Administrator to view this page.");
+//     window.location.href = '../../../Assignment_5_Group_1/QSLoginBackend/QSLoginScreen.html'; // Adjust relative path if needed
+// }
+
+// Extract Admin variables for application usage
+const Admin_User = 
+{
+    ID: Number(currentUser?.id),
+    Name: currentUser?.name,
+    Email: currentUser?.email,
+    Role: currentUser?.role
+}
+
+function logout() 
+{
+    sessionStorage.removeItem('qs_user');
+    window.location.href = '../../../Assignment_5_Group_1/QSLoginBackend/QSLoginScreen.html';
+}
+
+// Univsersal Functions
+
 document.addEventListener("DOMContentLoaded", () => {
     Hamburger_Menu();
     Service_Selection_Box();
