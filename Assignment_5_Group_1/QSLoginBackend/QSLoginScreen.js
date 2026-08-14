@@ -171,7 +171,7 @@ async function handleAdminLogin(e){
 
       showToast(`Welcome, adminstrator ${data.name}`);
       sessionStorage.setItem('qs_user', JSON.stringify(data));
-      window.location.href = '../A2_HTML/AdminDash.html';
+      window.location.href = '../A2_HTML/QSAdminDash.html';
     } catch(err) {
     showToast('Could not reach the server');
     }

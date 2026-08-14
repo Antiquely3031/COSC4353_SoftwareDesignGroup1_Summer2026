@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]>      <html class="no-js"> <!--<![endif]-->
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Administration Screen</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="../A2_CSS/QSAdmin.css">
+        <link rel="stylesheet" href="../A2_CSS/QSAdminDash.css">
+        <script src="http://localhost:4000/socket.io/socket.io.js"></script>
+        <script src="../A2_JS/QSAdmin.js" defer></script>
+        <script src="../A2_JS/QSAdminDash.js" defer></script>
+    </head>
+    <body>
+        <!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+
+        <!-- <script src="" async defer></script> -->
+        <header>
+            <nav>
+                <button>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul>
+                    <li><p>Welcome, Admin!</p></li>
+                    <li><div></div></li>
+                    <li><a href="QSAdminDash.html">Dashboard</a></li>
+                    <li><a href="QSAdminSerManage.html">Service Management</a></li>
+                    <li><a href="QSAdminQueManage.html">Queue Management</a></li>
+                    <li><a href="#" onclick="logout(); return false;">Log Out</a></li>
+                </ul>
+            </nav>
+
+            <img src="../QueueSmartLogo.png" alt="QueueSmart logo" class="logo">
+
+            <p>Administrator Dashboard</p>
+        </header>
+
+        <div class="decor-bar"></div>
+
+        <section class="container" id="service-list">
+            <span class="SLB-Title"><p>Services</p><p>Queue Length</p><p>Status</p></span>
+            <div class="scroll-list-box"><ul></ul></div>
+        </section>
+
+        <section class="container" id="action-box">
+            <span class="SCB-Title">Actions</span>
+            <div class="status-change-box">
+                <span><p>Service:</p><p id="SCB-Name">Select Service</p></span>
+                <span><p>Status:</p><p id="SCB-Status">NaN</p></span>
+                
+                <span id="action-buttons">
+                    <span id="AB-apply-to-service">
+                        <button type="button" class="button-feedback" id="SCB-AB-Open">Open</button>
+                        <button type="button" class="button-feedback" id="SCB-AB-Close">Close</button>
+                    </span>
+                    <button type="button" class="button-feedback" id="AB-Deselect">Deselect</button>
+                </span>
+            </div>
+        </section>
+        <section class="container" id="input-form">
+            <p class="SLB-Title">Report Generator</p>
+            <form id="report-generator-form">
+                <span id="essential-fields">
+                    <label for="timeframes">Current Time Frame:</label>
+                    <select name="timeframes" id="timeframes">
+                        <option value="week">Weekly</option>
+                        <option value="month">Monthly</option>
+                        <option value="quarter">Quarterly</option>
+                        <option value="annual">Annually</option>
+                    </select>
+                </span>
+
+                <span id="action-buttons">
+                    <button type="submit" class="button-feedback" id="AB-Report-Submit">Submit</button>
+                </span>
+            </form>
+        </section>
+    </body>
+</html>
