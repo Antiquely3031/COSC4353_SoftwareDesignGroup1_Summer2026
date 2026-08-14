@@ -242,3 +242,4 @@ app.use((err, req, res, next) => {
 
 module.exports = app;
 module.exports.isAnomalousLogin = isAnomalousLogin;
+module.exports.calculateLockoutMinutes = calculateLockoutMinutes;
