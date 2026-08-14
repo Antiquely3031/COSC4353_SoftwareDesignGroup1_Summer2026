@@ -72,6 +72,24 @@ module.exports = {
       [user_id]
     );
   },
+  incrementFailedAttempts: async (userId) => {
+    await pool.execute(
+      `UPDATE UserCredentials SET failed_attempts = failed_attempts + 1 WHERE user_id = ?`,
+      [userId]
+    );
+  },
+  setLockout: async (userId, lockedUntil) => {
+    await pool.execute(
+      `UPDATE UserCredentials SET locked_until = ? WHERE user_id = ?`,
+      [lockedUntil, userId]
+    );
+  },
+  resetFailedAttempts: async (userId) => {
+    await pool.execute(
+      `UPDATE UserCredentials SET failed_attempts = 0, locked_until = NULL WHERE user_id = ?`,
+      [userId]
+    );
+  },
   updateLoginTracking: async (userId, ip) => {
     await pool.execute(
       `UPDATE UserCredentials SET last_login_ip = ?, last_login_time = NOW() WHERE user_id = ?`,
