@@ -8,6 +8,11 @@ const nodemailer = require('nodemailer');
 const app = express();
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function calculateLockoutMinutes(failedAttempts) {
+  if(failedAttempts < 5) return 0;
+  return Math.pow(2, failedAttempts - 5);
+}
+
 function isAnomalousLogin(user, currentIp) {
   if(!user.last_login_ip || !user.last_login_time) {
     return false;
