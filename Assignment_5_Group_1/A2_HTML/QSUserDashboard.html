@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QueueSmart Dashboard</title>
+    <link rel="stylesheet" href="../A2_CSS/QSUserDashboard.css">
+</head>
+
+<body>
+    <!-- PLACE HOLDER DATA AND SAMPLE FORMAT-->
+    <!--Logo image location-->
+
+    <header class="top-header">
+        <div class="logo-area">
+            <img src="../QueueSmartLogo.png" alt="QueueSmart logo" class="logo">
+        </div>
+        <h1>QueueSmart</h1>
+        <p>Welcome, User!</p>
+    </header>
+
+    <nav class="navbar">
+        <a href="QSUserDashboard.html">Dashboard</a>
+        <a href="QSJoinQueue.html">Join Queue</a>
+        <a href="QSQueueStatus.html">Queue Status</a>
+        <a href="QSQueueHistory.html">History</a>
+        <a href="#" onclick="logout(); return false;">Logout</a>
+    </nav>
+    <main class="dashboard-container" id="dashboardPage">
+
+        <section class="card">
+            <h2>Welcome Back</h2>
+            <p>View your current queue status, available services, and recent notifications.</p>
+        </section>
+
+        <!-- Current Queue Status Reminder that values seen are placeholder -->
+        <section class="card">
+            <h2>Waiting Status</h2>
+            <p><strong>Service:</strong> <span id="dashboardService">--</span></p>
+            <p><strong>Current Position:</strong> <span id="dashboardPosition">--</span></p>
+            <p><strong>Estimated Wait Time (minutes):</strong> <span id="dashboardWaitTime">--</span></p>
+            <p><strong>Status:</strong> <span class="status-badge" id="dashboardStatus">--</span></p>
+        </section>
+
+        <!-- Selecting Available Services-->
+        <section class="card">
+            <h2>Available Services</h2>
+            <!--7/29/2026 removing hard-coded section of queue selection replacing with SQL connect elements-->
+            <div id="dashboardServiceGrid" class="service-grid">
+                <p>Load Services.</p>
+            </div>
+        </section>
+    </main>
+    <script src="../A2_JS/QSNotifications.js"></script>
+    <script src="../A2_JS/QSUser.js"></script>
+
+</body>
+
+</html>
