@@ -8,6 +8,15 @@ const nodemailer = require('nodemailer');
 const app = express();
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function isAnomalousLogin(user, currentIp) {
+  if(!user.last_login_ip || !user.last_login_time) {
+    return false;
+  }
+  const ipChanged = user.last_login_ip !== currentIp;
+  const minutesSinceLastLogin = (Date.now() - new Date(user.last_login_time)) / 60000;
+  return ipChanged && minutesSinceLastLogin < 30;
+}
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -70,7 +79,22 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({error: 'Invalid email or password'});
   }
 
-  res.status(200).json({ id: user.user_id, name: user.name, email: user.email, role: user.role });
+  const currentIp = req.ip;
+  const anomalous = isAnomalousLogin(user, currentIp);
+  if(anomalous) {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: 'QueueSmart - New Login Detected',
+      text: `We noticed a login to your account from a different network recently. If this was you, no action need be taken. If not, consider changing your password.`
+    });
+  }
+
+  await db.updateLoginTracking(user.user_id, currentIp);
+
+  res.status(200).json({ id: user.user_id, name: user.name, email: user.email, role: user.role,
+    securityNotice: anomalous ? 'We noticed unusual login activity and sent you a notification.' : null
+   });
 });
 
 app.post('/api/admin-login', async (req, res) => {
