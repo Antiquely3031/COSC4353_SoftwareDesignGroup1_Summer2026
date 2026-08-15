@@ -1,26 +1,17 @@
 {
-  "dependencies": {
-    "bcrypt": "^6.0.0",
-    "cores": "^0.8.0",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "mysql2": "^3.23.3"
-  },
-  "name": "backend",
+  "name": "qsuserbackend",
   "version": "1.0.0",
   "main": "db.js",
-  "devDependencies": {
-    "jest": "^30.4.2",
-    "supertest": "^7.2.2"
-  },
   "scripts": {
-    "start": "node server.js",
-    "test": "jest --coverage"
+    "test": "jest --coverage",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
-  "type": "commonjs"
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
+  }
 }
