@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QueueSmart - Join Queue</title>
-
     <!-- Shared user-side styling -->
     <link rel="stylesheet" href="../A2_CSS/QSUserDashboard.css">
-
     <!-- Styling specific to this page -->
     <link rel="stylesheet" href="../A2_CSS/QSJoinQueue.css">
 </head>
@@ -19,7 +17,6 @@
         </div>
         <h1>QueueSmart</h1>
         <p>Join a Queue</p>
-
     </header>
     <!-- Same navigation used on all User pages -->
     <nav class="navbar">
@@ -51,15 +48,15 @@
                 <!--wait-time information -->
                 <div class="queue-preview">
                     <h3>Queue Information</h3>
-                    <p>
-                        <strong>Selected Service:</strong>
-                        <span id="selectedService">None selected</span>
-                    </p>
+                    <p><!--smart feature, give s recommendation to user-->
+                        <strong>Recommendation:</strong>
+                        <span id="smartSuggestion">Select a service to see recomendation.</span></p>
 
-                    <p>
-                        <strong>Estimated Wait Time:</strong>
-                        <span id="estimatedWait">Select a service</span>
-                    </p>
+                    <button type="button" id="switchToShorterQueueButton" class="join-button" style="display: none;">Switch to Suggested Queue</button>
+                    <p><strong>Selected Service:</strong>
+                        <span id="selectedService">None selected</span></p>   
+                    <p><strong>Estimated Wait Time:</strong>
+                        <span id="estimatedWait">Select a service</span></p>
                 </div>
                 <div class="queue-actions">
                     <button type="submit" class="join-button">Join Queue</button>
