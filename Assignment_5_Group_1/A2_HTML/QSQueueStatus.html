@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="../A2_CSS/QSUserDashboard.css">
     <!--Styling dedicated to this page-->
     <link rel="stylesheet" href="../A2_CSS/QSQueueStatus.css">
+    <link rel="stylesheet" href="../A2_CSS/QSNotifications.css">
 </head>
 
 <body>
@@ -27,7 +28,9 @@
         <a href="QSJoinQueue.html">Join Queue</a>
         <a href="QSQueueStatus.html">Queue Status</a>
         <a href="QSQueueHistory.html">History</a>
-        <a href="QSLoginScreen.html">Logout</a>
+        <a href="QSNotifications.html">Notifications</a>
+        <!-- <a href="QSLoginScreen.html">Logout</a> -->
+        <a href="#" onclick="logout(); return false;">Logout</a>
     </nav>
 
     <main class="dashboard-container" id="queueStatusPage">
@@ -61,6 +64,7 @@
     </main>
 
     <script src="../A2_JS/QSNotifications.js"></script>
+            data-queue-status="QSQueueStatus.html"></script>
     <script src="../A2_JS/QSUser.js"></script>
 </body>
 
