@@ -1,5 +1,5 @@
 // Mock the ES Module database pool before requiring QSAdminBackend
-jest.mock('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool', () => ({
+jest.mock('../QSAdminDB/QSAdminDBPool', () => ({
   __esModule: true,
   default: {
     query: jest.fn().mockImplementation((sql, params) => {
@@ -163,7 +163,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const pool = require('../../Assignment_4_Group_1/QSAdminDB/QSAdminDBPool').default;
+const pool = require('../QSAdminDB/QSAdminDBPool').default;
 const { 
   startServer, 
   Service_Entry, 
