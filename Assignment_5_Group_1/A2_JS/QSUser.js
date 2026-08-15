@@ -151,7 +151,6 @@ async function setupDashboardPage() {
     try {
         const response = await fetch(`${baseAPI}/queue/status/${userID}`);
         const data = await response.json();
-
         if (!response.ok) {
             if (serviceName) serviceName.textContent = "--";
             if (queuePosition) queuePosition.textContent = "--";
@@ -159,7 +158,6 @@ async function setupDashboardPage() {
             if (queueStatus) queueStatus.textContent = "Not in queue";
             return;
         }
-
         if (serviceName) serviceName.textContent = data.serviceName;
         if (queuePosition) queuePosition.textContent = data.position;
         if (waitTime) waitTime.textContent = data.estimatedWait;
@@ -167,7 +165,6 @@ async function setupDashboardPage() {
 
     } catch (error) {
         console.error("Error loading dashboard queue status:", error);
-
         if (serviceName) serviceName.textContent = "--";
         if (queuePosition) queuePosition.textContent = "--";
         if (waitTime) waitTime.textContent = "--";
@@ -176,7 +173,6 @@ async function setupDashboardPage() {
 }
 //queue status page
 async function setupQueueStatusPage() {
-
     const serviceName = document.getElementById("statusService");
     const queuePosition = document.getElementById("statusPosition");
     const waitTime = document.getElementById("statusWaitTime");
@@ -199,13 +195,11 @@ async function setupQueueStatusPage() {
             }
             return;
         }
-
         if (statusMessage) statusMessage.innerHTML = "<em>Now in queue</em>";
         if (serviceName) serviceName.textContent = data.serviceName;
         if (queuePosition) queuePosition.textContent = data.position;
         if (waitTime) waitTime.textContent = `${data.estimatedWait} minutes`;
         if (queueStatus) queueStatus.textContent = data.status;
-
     }
     catch (error) {
         console.error("Error loading queue status:", error);
@@ -254,18 +248,15 @@ async function setupQueueStatusPage() {
 //queue history page
 async function setupHistoryPage() {
     const historyListBody = document.getElementById("historyListBody");
-
     const summaryTotal = document.getElementById("summaryTotal");
     const summaryServed = document.getElementById("summaryServed");
     const summaryCanceled = document.getElementById("summaryCanceled");
     const summaryNoShow = document.getElementById("summaryNoShow");
-
     //default
     if (!historyListBody) {
         console.log("No history list found");
         return;
     }
-
     try {
         const response = await fetch(`${baseAPI}/queue/history/${userID}`);
         const history = await response.json();
@@ -301,19 +292,16 @@ async function setupHistoryPage() {
         history.forEach(record => {
             const status = record.status || "unknown";
             const statusLower = status.toLowerCase();
-
             let statusClass = "waiting";
 
             if (statusLower === "served" || statusLower === "completed") {
                 servedCount++;
                 statusClass = "completed";
             }
-
             if (statusLower === "canceled" || statusLower === "cancelled") {
                 canceledCount++;
                 statusClass = "canceled";
             }
-
             if (statusLower === "no show") {
                 noShowCount++;
                 statusClass = "no-show";
@@ -322,19 +310,16 @@ async function setupHistoryPage() {
             const joinedDate = record.join_time ? new Date(record.join_time) : null;
             const date = joinedDate ? joinedDate.toLocaleDateString() : "--";
             const time = joinedDate ? joinedDate.toLocaleTimeString() : "--";
-
             const row = document.createElement("div");
+            
             row.classList.add("history-row");
-
             row.innerHTML = `
                 <span>${record.service_name}</span>
                 <span>${date}</span>
                 <span>${time}</span>
                 <span class="outcome ${statusClass}">
                     ${status}
-                </span>
-            `;
-
+                </span>`;
             historyListBody.appendChild(row);
         });
 
@@ -420,9 +405,7 @@ async function setupHistoryPage() {
 async function loadServicesDropdown() {
     console.log("loadServicesDropdown is running");
     console.log("Fetching from:", `${baseAPI}/services`);
-
     const serviceSelect = document.getElementById("serviceSelect");
-
     console.log("serviceSelect:", serviceSelect);
 
     if (!serviceSelect) {
@@ -432,7 +415,6 @@ async function loadServicesDropdown() {
     try {
         const response = await fetch(`${baseAPI}/services`);
         console.log("services response:", response.status);
-
         if (!response.ok) {
             throw new Error("Failed to load services from backend");
         }
@@ -446,7 +428,6 @@ async function loadServicesDropdown() {
         serviceSelect.innerHTML = `<option value="">Select a service</option>`;
         services.forEach(service => {
             const option = document.createElement("option");
-
             option.value = service.service_id;
             option.textContent = service.service_name;
             option.dataset.wait = service.expected_duration;
@@ -470,7 +451,6 @@ async function loadDashboardServices() {
         if (!response.ok) {
             throw new Error("Failed to load services from backend");
         }
-
         const services = await response.json();
         serviceGrid.innerHTML = "";
         services.forEach(service => {
@@ -500,7 +480,6 @@ async function leaveQueueFromDatabase() {
         })
     });
     const data = await response.json();
-
     if (!response.ok) {
         throw new Error(data.error || "Failed to leave queue.");
     }
@@ -520,8 +499,6 @@ async function loadSmartWaitTime(selectedServiceId) {
         }
         return;
     }
-
-
     try {
         const response = await fetch(`${baseAPI}/smart/wait-times`);
         const waitTimes = await response.json();
@@ -529,7 +506,6 @@ async function loadSmartWaitTime(selectedServiceId) {
         if (!response.ok) {
             throw new Error(waitTimes.error || "Failed to load smart wait times.");
         }
-
         const selectedService = waitTimes.find(service =>
             Number(service.service_id) === Number(selectedServiceId)
         );
@@ -550,7 +526,7 @@ async function loadSmartWaitTime(selectedServiceId) {
         // if number of queues is zero display given message
         if (Number(selectedService.waiting_count) === 0) {
             smartSuggestion.textContent =
-                "Smart Suggestion: This queue is currently empty. This is a good time to join.";
+                "Smart Suggestion: This queue is currently empty.";
         }
         else if (
             shortestService &&
@@ -558,14 +534,13 @@ async function loadSmartWaitTime(selectedServiceId) {
             Number(shortestService.estimated_wait) < Number(selectedService.estimated_wait)
         ) {
             smartSuggestion.textContent =
-                `Smart Suggestion: ${selectedService.service_name} has about ${selectedService.estimated_wait} minutes of wait time. ` +
-                `${shortestService.service_name} is currently shorter at about ${shortestService.estimated_wait} minutes.`;
+                `${selectedService.service_name} estimated ${selectedService.estimated_wait} minutes of wait time. ` +
+                `${shortestService.service_name} shorter approx ${shortestService.estimated_wait} minutes.`;
         }
         else {
             smartSuggestion.textContent =
-                `Smart Suggestion: This queue has ${selectedService.waiting_count} user(s) waiting with an estimated wait of ${selectedService.estimated_wait} minutes.`;
+                `Service has ${selectedService.waiting_count} user(s) estimated wait ${selectedService.estimated_wait} minutes.`;
         }
-
     }
     catch (error) {
         console.error("Error loading smart suggestion:", error);
