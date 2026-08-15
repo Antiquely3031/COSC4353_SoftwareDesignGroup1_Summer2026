@@ -66,3 +66,31 @@
     background-color: var(--error);
     color: var(--text);
 }
+.smart-card {
+    margin-top: 24px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.smart-card h3 {
+    margin-top: 0;
+    margin-bottom: 18px;
+    color: #ffffff;
+    font-size: 1.6rem;
+}
+
+.smart-card p {
+    margin: 12px 0;
+    line-height: 1.6;
+    color: #d6d9e0;
+}
+
+.smart-card strong {
+    color: #ffffff;
+}
+
+#switchToShorterQueueButton {
+    margin-top: 15px;
+}
