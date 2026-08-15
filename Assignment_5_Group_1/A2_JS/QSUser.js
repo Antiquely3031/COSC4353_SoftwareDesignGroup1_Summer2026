@@ -489,62 +489,120 @@ async function leaveQueueFromDatabase() {
 //implement a smart wait time feature
 async function loadSmartWaitTime(selectedServiceId) {
     const estimatedWait = document.getElementById("estimatedWait");
+    const smartQueueLoad = document.getElementById("smartQueueLoad");
     const smartSuggestion = document.getElementById("smartSuggestion");
+    const smartReason = document.getElementById("smartReason");
+    const smartAction = document.getElementById("smartAction");
     const switchButton = document.getElementById("switchToShorterQueueButton");
     const serviceSelect = document.getElementById("serviceSelect");
 
-    if (!selectedServiceId || !smartSuggestion) {
-        if (switchButton) {
-            switchButton.style.display = "none";
-        }
+    //default messages intially
+    if (!selectedServiceId) {
+        if (estimatedWait) estimatedWait.textContent = "Select a service";
+        if (smartQueueLoad) smartQueueLoad.textContent = "Select a service";
+        if (smartSuggestion) smartSuggestion.textContent = "Select a service to see a smart recommendation.";
+        if (smartReason) smartReason.textContent = "The system will compare live queue wait times.";
+        if (smartAction) smartAction.textContent = "Select a service first.";
+        if (switchButton) switchButton.style.display = "none";
         return;
     }
+
     try {
         const response = await fetch(`${baseAPI}/smart/wait-times`);
         const waitTimes = await response.json();
 
         if (!response.ok) {
-            throw new Error(waitTimes.error || "Failed to load smart wait times.");
+            throw new Error(waitTimes.error || "Failed to load wait times.");
         }
+
         const selectedService = waitTimes.find(service =>
             Number(service.service_id) === Number(selectedServiceId)
         );
 
         const shortestService = waitTimes[0];
-
         if (!selectedService) {
-            smartSuggestion.textContent = "Unable to find wait-time data for this service.";
+            if (smartSuggestion) smartSuggestion.textContent = "Smart recommendation unavailable for this service.";
+            if (smartReason) smartReason.textContent = "No live queue data was found for the selected service.";
+            if (smartAction) smartAction.textContent = "Try selecting another service.";
             if (switchButton) switchButton.style.display = "none";
             return;
         }
+
         const selectedWait = Number(selectedService.estimated_wait);
         const selectedCount = Number(selectedService.waiting_count);
+        const selectedDuration = Number(selectedService.expected_duration);
 
         if (estimatedWait) {
             estimatedWait.textContent = `${selectedWait} minutes`;
         }
-        // if number of queues is zero display given message
-        if (Number(selectedService.waiting_count) === 0) {
-            smartSuggestion.textContent =
-                "Smart Suggestion: This queue is currently empty.";
+
+        if (smartQueueLoad) {
+            smartQueueLoad.textContent = `${selectedCount} user(s) currently waiting`;
         }
-        else if (
-            shortestService &&
-            Number(shortestService.service_id) !== Number(selectedServiceId) &&
-            Number(shortestService.estimated_wait) < Number(selectedService.estimated_wait)
-        ) {
-            smartSuggestion.textContent =
-                `${selectedService.service_name} estimated ${selectedService.estimated_wait} minutes of wait time. ` +
-                `${shortestService.service_name} shorter approx ${shortestService.estimated_wait} minutes.`;
+        //if queue empty
+        if (selectedCount === 0) {
+            if (smartSuggestion) {
+                smartSuggestion.textContent = "This queue is currently empty.";
+            }
+            if (smartReason) {
+                smartReason.textContent =
+                    `No users in queue, the estimated wait is currently ${selectedWait} minutes.`;
+            }
+            if (smartAction) {
+                smartAction.textContent = "Optimal time to join this queue.";
+            }
+
+            if (switchButton) {
+                switchButton.style.display = "none";
+            }
+        }
+        else if (shortestService && Number(shortestService.service_id) !== Number(selectedServiceId) && Number(shortestService.estimated_wait) < selectedWait) {
+            if (smartSuggestion) {
+                smartSuggestion.textContent = `${shortestService.service_name} currently has a shorter estimated wait.`;
+            }
+            if (smartReason) {
+                smartReason.textContent =
+                    `${selectedService.service_name} has ${selectedCount} user(s) waiting and an estimated wait of ${selectedWait} minutes. ` +
+                    `${shortestService.service_name} is estimated at ${shortestService.estimated_wait} minutes.`;
+            }
+            if (smartAction) {
+                smartAction.textContent = "Switch to the suggested service satisfy need or stay with your selected service.";
+            }
+            if (switchButton) {
+                switchButton.style.display = "inline-flex";
+                switchButton.classList.add("smart-switch-button");
+                switchButton.dataset.serviceId = shortestService.service_id;
+                switchButton.innerHTML = `<span class="smart-switch-icon">↪</span>
+                    <span class="smart-switch-text">Switch to ${shortestService.service_name}</span>`;
+            }
         }
         else {
-            smartSuggestion.textContent =
-                `Service has ${selectedService.waiting_count} user(s) estimated wait ${selectedService.estimated_wait} minutes.`;
+            if (smartSuggestion) {
+                smartSuggestion.textContent = "Your selected service is currently a reasonable choice.";
+            }
+            if (smartReason) {
+                smartReason.textContent =
+                    `This queue has ${selectedCount} user(s) waiting. Each service slot is estimated at about ${selectedDuration} minutes.`;
+            }
+            if (smartAction) {
+                smartAction.textContent = "You can join this queue now.";
+            }
+            if (switchButton) {
+                switchButton.style.display = "none";
+            }
         }
-    }
-    catch (error) {
+        if (switchButton && serviceSelect) {
+            switchButton.onclick = () => {
+                serviceSelect.value = switchButton.dataset.serviceId;
+                serviceSelect.dispatchEvent(new Event("change"));
+            };
+        }
+    } catch (error) {
         console.error("Error loading smart suggestion:", error);
-        smartSuggestion.textContent = "Smart suggestion unavailable.";
+        if (smartSuggestion) smartSuggestion.textContent = "Smart recommendation unavailable.";
+        if (smartReason) smartReason.textContent = "The system could not load live queue data.";
+        if (smartAction) smartAction.textContent = "Try again later.";
+        if (switchButton) switchButton.style.display = "none";
     }
 }
 function logout() {
