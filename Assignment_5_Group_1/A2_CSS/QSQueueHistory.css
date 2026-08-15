@@ -1,11 +1,10 @@
-:root
-{
+:root {
     --ink: #1E4CD2;
     --card: #172B3E;
     --field: #172B3E;
     --text: #F2F9F8;
     --muted: #8b8b96;
-    --error: #e8836b;
+    --error: #f25d38;
     --background: #07090f;
     --border: rgba(242, 249, 248, 0.15);
 }
