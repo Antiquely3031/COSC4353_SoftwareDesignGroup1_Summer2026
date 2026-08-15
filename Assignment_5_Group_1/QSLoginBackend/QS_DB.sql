@@ -13,6 +13,8 @@ CREATE TABLE UserCredentials (
     reset_token_expires TIMESTAMP NULL,
     last_login_ip VARCHAR(45),
     last_login_time TIMESTAMP NULL
+	failed_attempts INT NOT NULL DEFAULT 0,
+    locked_until DATETIME NULL
 );
 
 CREATE TABLE UserProfile (
