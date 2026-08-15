@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QueueSmart Dashboard</title>
     <link rel="stylesheet" href="../A2_CSS/QSUserDashboard.css">
+    <link rel="stylesheet" href="../A2_CSS/QSNotifications.css">
 </head>
 
 <body>
@@ -25,6 +26,7 @@
         <a href="QSJoinQueue.html">Join Queue</a>
         <a href="QSQueueStatus.html">Queue Status</a>
         <a href="QSQueueHistory.html">History</a>
+        <a href="QSNotifications.html">Notifications</a>
         <a href="#" onclick="logout(); return false;">Logout</a>
     </nav>
     <main class="dashboard-container" id="dashboardPage">
@@ -52,7 +54,8 @@
             </div>
         </section>
     </main>
-    <script src="../A2_JS/QSNotifications.js"></script>
+    <script src="../A2_JS/QSNotifications.js">
+            data-queue-status="QSQueueStatus.html"></script>
     <script src="../A2_JS/QSUser.js"></script>
 
 </body>
