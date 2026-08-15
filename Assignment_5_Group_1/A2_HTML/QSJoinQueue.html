@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QueueSmart - Join Queue</title>
+
     <!-- Shared user-side styling -->
     <link rel="stylesheet" href="../A2_CSS/QSUserDashboard.css">
+
     <!-- Styling specific to this page -->
     <link rel="stylesheet" href="../A2_CSS/QSJoinQueue.css">
-    <link rel="stylesheet" href="../A2_CSS/QSNotifications.css">
 </head>
+
 <body>
     <!-- Same header used by the User Dashboard -->
     <header class="top-header">
@@ -18,6 +21,7 @@
         </div>
         <h1>QueueSmart</h1>
         <p>Join a Queue</p>
+
     </header>
     <!-- Same navigation used on all User pages -->
     <nav class="navbar">
@@ -25,10 +29,7 @@
         <a href="QSJoinQueue.html">Join Queue</a>
         <a href="QSQueueStatus.html">Queue Status</a>
         <a href="QSQueueHistory.html">History</a>
-        <!-- <a href="QSLoginScreen.html">Logout</a> --> 
-        <!-- Having an error when click Logout browser "file not found". 
-             Using this fix clears the session, then returns to the login screen. -->
-        <a href="#" onclick="logout(); return false;">Logout</a>
+        <a href="QSLoginScreen.html">Logout</a>
     </nav>
     <main class="dashboard-container" id="joinQueuePage">
         <!-- Page introduction -->
@@ -41,9 +42,7 @@
             <h2>Select a Service</h2>
             <form id="joinQueueForm" novalidate>
                 <div class="form-group">
-                    <label for="serviceSelect">
-                        Available Service
-                    </label>
+                    <label for="serviceSelect">Available Service</label>
                     <!--Dropdown options-->
                     <select id="serviceSelect" name="service" required>
                         <option value="">Loading Services....</option>
@@ -52,15 +51,35 @@
                 <!--wait-time information -->
                 <div class="queue-preview">
                     <h3>Queue Information</h3>
-                    <p><!--smart feature, give s recommendation to user-->
+                    <p>
+                        <!--smart feature, gives recommendation to user-->
                         <strong>Recommendation:</strong>
                         <span id="smartSuggestion">Select a service to see recomendation.</span></p>
+                    <button type="button" id="switchToShorterQueueButton" class="join-button" style="display: none;">
+                        Switch to Suggested Queue
+                    </button>
 
-                    <button type="button" id="switchToShorterQueueButton" class="join-button" style="display: none;">Switch to Suggested Queue</button>
                     <p><strong>Selected Service:</strong>
-                        <span id="selectedService">None selected</span></p>   
+                        <span id="selectedService">None selected</span></p>
                     <p><strong>Estimated Wait Time:</strong>
                         <span id="estimatedWait">Select a service</span></p>
+                </div>
+                <div class="smart-card">
+                    <h3>Smart Queue Assistant</h3>
+
+                    <p><strong>Current Queue Load:</strong>
+                        <span id="smartQueueLoad">Select a service</span></p>
+                    <p><strong>Recommendation:</strong>
+                        <span id="smartSuggestion">Select a service to see a smart recommendation.</span></p>
+                    <p><strong>Reason:</strong>
+                        <span id="smartReason">The system will compare live queue wait times.</span></p>
+                    <p><strong>Best Action:</strong>
+                        <span id="smartAction">Select a service first.</span></p>
+                    <button type="button" id="switchToShorterQueueButton" class="smart-switch-button"
+                        style="display: none;">
+                        <span class="smart-switch-icon">↪</span>
+                        <span class="smart-switch-text">Switch to Suggested Queue</span>
+                    </button>
                 </div>
                 <div class="queue-actions">
                     <button type="submit" class="join-button">Join Queue</button>
@@ -75,8 +94,8 @@
         </section>
     </main>
     <!-- The notification module must load before QSUser.js which calls QSNotify -->
-    <script src="../A2_JS/QSNotifications.js"
-            data-queue-status="QSQueueStatus.html"></script>
+    <script src="../A2_JS/QSNotifications.js"></script>
     <script src="../A2_JS/QSUser.js"></script>
 </body>
+
 </html>
