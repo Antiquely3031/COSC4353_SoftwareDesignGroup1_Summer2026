@@ -10,6 +10,13 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mysql2": "^3.23.2"
+  },
   "devDependencies": {
     "jest": "^30.4.2",
     "supertest": "^7.2.2"
